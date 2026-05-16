@@ -3,20 +3,33 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useCart } from '@/contexts/CartContext';
+
 interface BuyPanelProps {
   sku: string;
+  name: string;
+  thumbnailUrl: string;
   priceMp4: number;
   priceMov: number;
 }
 
-export default function BuyPanel({ sku, priceMp4, priceMov }: BuyPanelProps) {
+export default function BuyPanel({ sku, name, thumbnailUrl, priceMp4, priceMov }: BuyPanelProps) {
   const [format, setFormat] = useState<'MP4' | 'MOV'>('MP4');
-  const router = useRouter();
+  const { addToCart } = useCart();
+  const [added, setAdded] = useState(false);
 
   const currentPrice = format === 'MOV' ? priceMov : priceMp4;
 
-  const handleBuy = () => {
-    router.push(`/checkout?sku=${encodeURIComponent(sku)}&format=${format}`);
+  const handleAddToCart = () => {
+    addToCart({
+      sku,
+      name,
+      format,
+      price: currentPrice,
+      thumbnailUrl,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
   };
 
   return (
@@ -104,7 +117,7 @@ export default function BuyPanel({ sku, priceMp4, priceMov }: BuyPanelProps) {
           <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-white">{format}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-slate-300">Tổng thanh toán</span>
+          <span className="text-slate-300">Giá sản phẩm</span>
           <span className="text-xl font-bold text-cyan-400">
             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(currentPrice)}
           </span>
@@ -112,13 +125,26 @@ export default function BuyPanel({ sku, priceMp4, priceMov }: BuyPanelProps) {
       </div>
 
       <button
-        onClick={handleBuy}
-        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-cyan-500/30 transition-all hover:scale-[1.02]"
+        onClick={handleAddToCart}
+        className={`w-full flex items-center justify-center gap-2 font-bold py-4 px-8 rounded-xl transition-all hover:scale-[1.02] ${
+          added 
+            ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' 
+            : 'bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white shadow-lg shadow-cyan-500/30'
+        }`}
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-        Mua Ngay
+        {added ? (
+          <>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            Đã thêm vào giỏ
+          </>
+        ) : (
+          <>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Thêm vào giỏ
+          </>
+        )}
       </button>
 
       <p className="text-xs text-slate-500 text-center mt-4">

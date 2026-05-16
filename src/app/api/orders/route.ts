@@ -1,54 +1,73 @@
 import { NextResponse } from 'next/server';
-import { sheets, SPREADSHEET_ID, getProducts } from '@/lib/google';
+import { sheets, SPREADSHEET_ID, getProducts, getTiers, getCoupons } from '@/lib/google';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sku, format, email, couponCode } = body;
+    const { items, email, couponCode } = body; // items: [{ sku, format }]
 
-    if (!sku || !format || !email) {
+    if (!items || !Array.isArray(items) || items.length === 0 || !email) {
       return NextResponse.json({ error: 'Thiếu thông tin đơn hàng' }, { status: 400 });
     }
 
-    // Lấy sản phẩm thực từ Sheets
-    const products = await getProducts();
-    const product = products.find(p => p.sku === sku && p.status === 'active');
+    // 1. Lấy dữ liệu thực từ Sheets để tính toán bảo mật
+    const [allProducts, allTiers, allCoupons] = await Promise.all([
+      getProducts(),
+      getTiers(),
+      getCoupons()
+    ]);
 
-    if (!product) {
-      return NextResponse.json({ error: 'Sản phẩm không tồn tại' }, { status: 404 });
-    }
+    let rawTotal = 0;
+    const validatedItems: string[] = [];
 
-    let price = format.toUpperCase() === 'MOV' ? product.priceMov : product.priceMp4;
-    if (!price || price <= 0) {
-      return NextResponse.json({ error: 'Định dạng này không có sẵn để bán' }, { status: 400 });
-    }
+    // 2. Tính giá gốc và kiểm tra tồn tại
+    for (const item of items) {
+      const product = allProducts.find(p => p.sku === item.sku && p.status === 'active');
+      if (!product) continue;
 
-    let appliedDiscount = 0;
-    if (couponCode) {
-      const { getCoupons } = await import('@/lib/google');
-      const coupons = await getCoupons();
-      const coupon = coupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
-      
-      if (coupon) {
-        if (coupon.discountValue <= 100 && coupon.discountValue > 0) {
-          appliedDiscount = (price * coupon.discountValue) / 100;
-        } else if (coupon.discountValue > 100) {
-          appliedDiscount = coupon.discountValue;
-        }
-        
-        if (appliedDiscount > price) appliedDiscount = price;
-        price = price - appliedDiscount;
-      } else {
-        return NextResponse.json({ error: 'Mã giảm giá không hợp lệ khi tạo đơn' }, { status: 400 });
+      const price = item.format.toUpperCase() === 'MOV' ? product.priceMov : product.priceMp4;
+      if (price > 0) {
+        rawTotal += price;
+        validatedItems.push(`${item.sku}(${item.format.toUpperCase()})`);
       }
     }
 
-    // Tạo mã đơn hàng duy nhất
+    if (validatedItems.length === 0) {
+      return NextResponse.json({ error: 'Không có sản phẩm hợp lệ trong đơn hàng' }, { status: 400 });
+    }
+
+    // 3. Tính toán giảm giá
+    let finalPrice = rawTotal;
+    let appliedDiscountInfo = 'Giá gốc';
+
+    // Ưu tiên 1: Giá lũy tiến (Tiers)
+    const activeTier = allTiers.find(t => validatedItems.length >= t.minItems);
+    if (activeTier) {
+      const discountAmount = Math.round((rawTotal * activeTier.discountPercent) / 100);
+      finalPrice = rawTotal - discountAmount;
+      appliedDiscountInfo = `Giảm ${activeTier.discountPercent}% (Tier ${activeTier.minItems}+ items)`;
+    } 
+    // Ưu tiên 2: Coupon (Chỉ khi không có Tier)
+    else if (couponCode) {
+      const coupon = allCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+      if (coupon) {
+        let couponDiscount = 0;
+        if (coupon.discountValue <= 100 && coupon.discountValue > 0) {
+          couponDiscount = (rawTotal * coupon.discountValue) / 100;
+        } else {
+          couponDiscount = coupon.discountValue;
+        }
+        finalPrice = Math.max(0, rawTotal - couponDiscount);
+        appliedDiscountInfo = `Mã: ${coupon.code}`;
+      }
+    }
+
+    // 4. Tạo mã đơn hàng
     const timestamp = Date.now().toString().slice(-6);
     const orderId = `DH${timestamp}`;
     const date = new Date().toISOString();
 
-    // Ghi đơn hàng vào tab Orders với trạng thái "pending"
+    // 5. Ghi vào Google Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'Orders!A:H',
@@ -58,19 +77,19 @@ export async function POST(request: Request) {
           orderId,
           date,
           email,
-          sku,
-          format.toUpperCase(),
-          price,
+          validatedItems.join(', '),
+          'MULTIPLE',
+          finalPrice,
           'pending',
-          `Khách tạo đơn lúc ${date}`
+          `Khách tạo đơn ${validatedItems.length} file. ${appliedDiscountInfo}`
         ]]
       }
     });
 
     return NextResponse.json({
       orderId,
-      price,
-      transferContent: `${orderId} ${sku}`,
+      price: finalPrice,
+      transferContent: `${orderId} KEN`, // Nội dung rút gọn
     });
   } catch (error) {
     console.error('Create order error:', error);

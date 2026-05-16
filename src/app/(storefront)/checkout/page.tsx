@@ -18,17 +18,12 @@ const BANK_ID = process.env.NEXT_PUBLIC_BANK_ID || 'MB';
 const ACCOUNT_NO = process.env.NEXT_PUBLIC_ACCOUNT_NO || '0123456789';
 const ACCOUNT_NAME = process.env.NEXT_PUBLIC_ACCOUNT_NAME || 'NGUYEN VAN KEN';
 
+import { useCart } from '@/contexts/CartContext';
+
 function CheckoutContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const sku = searchParams.get('sku') || '';
-  const formatParam = (searchParams.get('format') || 'MP4').toUpperCase() as 'MP4' | 'MOV';
+  const { items, cartTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal } = useCart();
 
-  const [product, setProduct] = useState<ProductInfo | null>(null);
-  const [loadingProduct, setLoadingProduct] = useState(true);
-  const [productError, setProductError] = useState('');
-
-  const [format, setFormat] = useState<'MP4' | 'MOV'>(formatParam);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [step, setStep] = useState<Step>('info');
@@ -46,18 +41,12 @@ function CheckoutContent() {
   const [couponError, setCouponError] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
-  // Fetch real product data
+  // Redirect if cart is empty
   useEffect(() => {
-    if (!sku) { setProductError('Không tìm thấy SKU sản phẩm.'); setLoadingProduct(false); return; }
-    setLoadingProduct(true);
-    fetch(`/api/products/${encodeURIComponent(sku)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { setProductError(data.error); } else { setProduct(data); }
-      })
-      .catch(() => setProductError('Không thể tải thông tin sản phẩm.'))
-      .finally(() => setLoadingProduct(false));
-  }, [sku]);
+    if (items.length === 0 && step === 'info') {
+      router.push('/cart');
+    }
+  }, [items, step, router]);
 
   // Polling order status
   useEffect(() => {
@@ -77,19 +66,13 @@ function CheckoutContent() {
         } catch (e) {
           console.error('Polling error', e);
         }
-      }, 3000); // Check every 3 seconds
+      }, 3000);
     }
 
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [step, orderId, router]);
-
-  const currentPrice = product ? (format === 'MOV' ? product.priceMov : product.priceMp4) : 0;
-
-  const qrUrl = orderId
-    ? `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png?amount=${finalPrice}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`
-    : '';
 
   const handleCopy = useCallback(async () => {
     try {
@@ -100,6 +83,10 @@ function CheckoutContent() {
   }, [transferContent]);
 
   const handleApplyCoupon = async () => {
+    if (tierDiscountPercent > 0) {
+      setCouponError('Không thể dùng mã giảm giá khi đã có ưu đãi mua nhiều.');
+      return;
+    }
     if (!couponInput) {
       setCouponError('Vui lòng nhập mã giảm giá.');
       return;
@@ -110,7 +97,7 @@ function CheckoutContent() {
       const res = await fetch('/api/coupons/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput, cartTotal: currentPrice })
+        body: JSON.stringify({ code: couponInput, cartTotal: cartTotal })
       });
       const data = await res.json();
       if (res.ok) {
@@ -147,7 +134,11 @@ function CheckoutContent() {
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sku, format, email, couponCode: appliedCoupon }),
+        body: JSON.stringify({ 
+          items: items.map(i => ({ sku: i.sku, format: i.format })), 
+          email, 
+          couponCode: appliedCoupon 
+        }),
       });
       const data = await res.json();
       if (!res.ok) { alert(data.error || 'Có lỗi khi tạo đơn hàng.'); return; }
@@ -162,19 +153,14 @@ function CheckoutContent() {
     }
   };
 
-  if (loadingProduct) {
-    return (
-      <div className="container mx-auto px-6 py-20 text-center">
-        <div className="animate-pulse text-slate-400 text-lg">Đang tải thông tin sản phẩm...</div>
-      </div>
-    );
-  }
+  const qrUrl = orderId
+    ? `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png?amount=${finalPrice}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`
+    : '';
 
-  if (productError || !product) {
+  if (items.length === 0 && step === 'info') {
     return (
       <div className="container mx-auto px-6 py-20 text-center">
-        <p className="text-red-400 text-xl mb-4">{productError || 'Sản phẩm không tồn tại.'}</p>
-        <Link href="/" className="text-cyan-400 hover:underline">← Quay về trang chủ</Link>
+        <div className="animate-pulse text-slate-400 text-lg">Đang chuyển hướng về giỏ hàng...</div>
       </div>
     );
   }
@@ -193,52 +179,40 @@ function CheckoutContent() {
         {/* LEFT */}
         <div className="md:col-span-3 space-y-6">
           
-          {/* Product summary */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex gap-4 items-center">
-            {product.thumbnailUrl && (
-              <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0">
-                <img src={product.thumbnailUrl} alt={product.name} className="w-full h-full object-cover" />
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">Sản phẩm</p>
-              <p className="text-white font-semibold">{product.name}</p>
-              <p className="text-xs text-slate-400 font-mono">{product.sku}</p>
+          {/* Cart summary */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div className="p-4 bg-slate-800/50 border-b border-slate-800 flex justify-between items-center">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Danh sách sản phẩm ({items.length})</h2>
+              <Link href="/cart" className="text-xs text-cyan-400 hover:underline">Sửa giỏ hàng</Link>
             </div>
-          </div>
-
-          {/* Format selector */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">1. Chọn định dạng</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {product.priceMp4 > 0 && (
-                <button
-                  onClick={() => setFormat('MP4')}
-                  disabled={step === 'qr'}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${format === 'MP4' ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700 hover:border-slate-500'}`}
-                >
-                  <p className="font-bold text-white">MP4</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Tối ưu Web & MXH</p>
-                  <p className="text-cyan-400 font-bold mt-2">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.priceMp4)}</p>
-                </button>
-              )}
-              {product.priceMov > 0 && (
-                <button
-                  onClick={() => setFormat('MOV')}
-                  disabled={step === 'qr'}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${format === 'MOV' ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700 hover:border-slate-500'}`}
-                >
-                  <p className="font-bold text-white">MOV</p>
-                  <p className="text-xs text-slate-400 mt-0.5">File gốc ProRes/Alpha</p>
-                  <p className="text-cyan-400 font-bold mt-2">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.priceMov)}</p>
-                </button>
-              )}
+            <div className="divide-y divide-slate-800">
+              {items.map((item) => (
+                <div key={`${item.sku}-${item.format}`} className="p-4 flex gap-4 items-center">
+                  {item.thumbnailUrl && (
+                    <div className="w-16 h-10 rounded bg-slate-800 overflow-hidden shrink-0">
+                      <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium line-clamp-1">{item.name}</p>
+                    <p className="text-[10px] text-slate-500 font-mono uppercase">{item.sku} • {item.format}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-slate-300">
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Coupon */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">2. Mã giảm giá (Nếu có)</h2>
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
+              Mã giảm giá
+              {tierDiscountPercent > 0 && <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-1 rounded">Đã áp dụng ưu đãi mua nhiều</span>}
+            </h2>
             {appliedCoupon ? (
               <div className="flex items-center justify-between bg-green-500/10 border border-green-500/50 rounded-xl px-4 py-3">
                 <div>
@@ -253,15 +227,15 @@ function CheckoutContent() {
               <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder="Nhập mã tại đây..."
-                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition uppercase disabled:opacity-50"
+                  placeholder={tierDiscountPercent > 0 ? "Không dùng chung với ưu đãi mua nhiều" : "Nhập mã tại đây..."}
+                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition uppercase disabled:opacity-30"
                   value={couponInput}
                   onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
-                  disabled={step === 'qr'}
+                  disabled={step === 'qr' || tierDiscountPercent > 0}
                 />
                 <button 
                   onClick={handleApplyCoupon}
-                  disabled={!couponInput || applyingCoupon || step === 'qr'}
+                  disabled={!couponInput || applyingCoupon || step === 'qr' || tierDiscountPercent > 0}
                   className="bg-slate-800 hover:bg-slate-700 text-white font-medium px-6 py-3 rounded-xl transition-colors disabled:opacity-50"
                 >
                   {applyingCoupon ? 'Đang thử...' : 'Áp dụng'}
@@ -273,8 +247,8 @@ function CheckoutContent() {
 
           {/* Email */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-1">3. Email nhận file (Google Drive)</h2>
-            <p className="text-xs text-slate-500 mb-4">File sẽ được chia sẻ tự động vào email này sau khi thanh toán xong.</p>
+            <h2 className="text-lg font-semibold text-white mb-1">Email nhận file (Google Drive)</h2>
+            <p className="text-xs text-slate-500 mb-4">Quyền truy cập thư mục sẽ được cấp tự động vào email này.</p>
             <input
               type="email"
               placeholder="example@gmail.com"
@@ -289,26 +263,31 @@ function CheckoutContent() {
           {/* Order total + CTA */}
           {step === 'info' && (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              {appliedCoupon && (
-                <div className="border-b border-slate-800 pb-4 mb-4 space-y-2">
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-400">Tạm tính</span>
-                      <span className="text-white line-through opacity-70">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(currentPrice)}
-                      </span>
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-400">Giảm giá ({appliedCoupon})</span>
-                      <span className="text-green-400 font-medium">
-                        -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}
-                      </span>
-                   </div>
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Tạm tính ({items.length} file)</span>
+                  <span className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
                 </div>
-              )}
-              <div className="flex justify-between items-center mb-5">
+                
+                {tierDiscountPercent > 0 && (
+                  <div className="flex justify-between text-sm text-green-400">
+                    <span>Ưu đãi mua nhiều (-{tierDiscountPercent}%)</span>
+                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal - cartFinalTotal)}</span>
+                  </div>
+                )}
+
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm text-green-400">
+                    <span>Mã giảm giá ({appliedCoupon})</span>
+                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center mb-6 border-t border-slate-800 pt-4">
                 <span className="text-slate-400">Tổng thanh toán</span>
                 <span className="text-2xl font-bold text-cyan-400">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(currentPrice - discountAmount)}
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(appliedCoupon ? cartTotal - discountAmount : cartFinalTotal)}
                 </span>
               </div>
               <button

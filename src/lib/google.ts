@@ -523,3 +523,70 @@ export async function getCoupons(): Promise<Coupon[]> {
     return [];
   }
 }
+
+// ---------- TIER PRICING MANAGEMENT (Google Sheet Tab 'Tiers') ----------
+
+export async function ensureTiersSheet(): Promise<void> {
+  try {
+    const ss = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+    const sheetsInfo = ss.data.sheets || [];
+    const tiersSheet = sheetsInfo.find(s => s.properties?.title === 'Tiers');
+    if (!tiersSheet) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: 'Tiers',
+                },
+              },
+            },
+          ],
+        },
+      });
+      // Add default headers
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Tiers!A1:B1',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [['MinItems', 'DiscountPercent']] },
+      });
+      // Add some sample tiers
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Tiers!A2:B',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [
+          ['5', '20'],
+          ['10', '30']
+        ] },
+      });
+    }
+  } catch (error) {
+    console.error('Error ensuring Tiers sheet exists:', error);
+  }
+}
+
+export async function getTiers(): Promise<{ minItems: number; discountPercent: number }[]> {
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Tiers!A2:B',
+    });
+    const rows = response.data.values;
+    if (!rows) return [];
+    
+    return rows
+      .map((row) => ({
+        minItems: parseInt(row[0]) || 0,
+        discountPercent: parseFloat(row[1]) || 0,
+      }))
+      .sort((a, b) => b.minItems - a.minItems); // Sort descending to check biggest tier first
+  } catch (error) {
+    console.error('Error fetching tiers:', error);
+    return [];
+  }
+}
+

@@ -55,14 +55,9 @@ export async function POST(request: Request) {
     const orderRowIndex = rows.findIndex((row) => row[0] === orderId);
     
     if (orderRowIndex === -1) {
-      await sendTelegramNotification(`⚠️ <b>Cảnh báo</b>: Nhận được tiền (${amount}đ) cho đơn <b>${orderId}</b> nhưng không tìm thấy đơn này trong hệ thống!`);
-      return NextResponse.json({ success: true, message: 'Đơn hàng không tồn tại' });
-    }
-
-    const order = rows[orderRowIndex];
+      await sendTelegramNotification(`⚠️ <b>Cảnh báo</b>: Nhận được tiền (${amount}đ) cho đ    const order = rows[orderRowIndex];
     const customerEmail = order[2];
-    const sku = order[3];
-    const format = order[4]; // MP4 or MOV
+    const itemsStr = order[3]; // "SKU1(MP4), SKU2(MOV)"
     const expectedAmount = parseFloat(order[5]);
     const currentStatus = order[6];
 
@@ -75,74 +70,106 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: 'Thanh toán không đủ' });
     }
 
-    // 4. Lấy ID File Gốc từ kho Video (Products)
+    // 4. Phân tách danh sách SKU và cấp quyền từng file
+    const itemList = itemsStr.split(',').map(s => {
+      const match = s.trim().match(/(.+)\((.+)\)/);
+      if (match) return { sku: match[1], format: match[2] };
+      return { sku: s.trim(), format: 'MP4' };
+    });
+
     const products = await getProducts();
-    const product = products.find((p) => p.sku === sku);
+    const results: { name: string; sku: string; success: boolean; link?: string }[] = [];
 
-    if (!product) {
-      await sendTelegramNotification(`❌ <b>Lỗi</b>: Khách đã mua mã <b>${sku}</b> nhưng sản phẩm này không tồn tại trong kho.`);
-      return NextResponse.json({ success: true, message: 'Sản phẩm không tồn tại' });
+    for (const item of itemList) {
+      const product = products.find(p => p.sku === item.sku);
+      if (!product) {
+        results.push({ name: 'Không xác định', sku: item.sku, success: false });
+        continue;
+      }
+
+      const fileId = item.format.toUpperCase() === 'MOV' ? product.driveGocMovId : product.driveGocMp4Id;
+      if (!fileId) {
+        results.push({ name: product.name, sku: item.sku, success: false });
+        continue;
+      }
+
+      const success = await grantDrivePermission(fileId, customerEmail);
+      results.push({ 
+        name: product.name, 
+        sku: item.sku, 
+        success, 
+        link: `https://drive.google.com/file/d/${fileId}/view` 
+      });
     }
 
-    // Xác định file cần cấp quyền dựa trên định dạng khách mua
-    const fileIdToGrant = format.toUpperCase() === 'MOV' ? product.driveGocMovId : product.driveGocMp4Id;
-
-    if (!fileIdToGrant) {
-      await sendTelegramNotification(`❌ <b>Lỗi kho</b>: Sản phẩm <b>${sku}</b> bị thiếu File Gốc (${format}) trên Google Drive! Khách đã thanh toán.`);
-      return NextResponse.json({ success: true, message: 'File gốc không tồn tại' });
-    }
-
-    // 5. Gọi API cấp quyền Google Drive cho khách hàng
-    const grantSuccess = await grantDrivePermission(fileIdToGrant, customerEmail);
-
-    if (!grantSuccess) {
-      await sendTelegramNotification(`⚠️ <b>Lỗi cấp quyền</b>: Không thể share file cho email <b>${customerEmail}</b>. Hãy xử lý thủ công.`);
-      return NextResponse.json({ success: false, message: 'Lỗi cấp quyền Drive' }, { status: 500 });
-    }
-
-    // 6. Cập nhật Trạng thái đơn hàng trên Google Sheets
-    const updateRange = `Orders!G${orderRowIndex + 1}`; // Cột G là Trạng thái
+    // 5. Cập nhật Trạng thái đơn hàng trên Google Sheets
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: updateRange,
+      range: `Orders!G${orderRowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [['completed']]
+      requestBody: { values: [['completed']] }
+    });
+
+    // 6. Gửi thông báo Telegram
+    const successItems = results.filter(r => r.success);
+    const failItems = results.filter(r => !r.success);
+
+    let telegramMsg = `✅ <b>Thanh toán thành công</b>: Đơn hàng <b>${orderId}</b>\n` +
+                      `- Khách hàng: ${customerEmail}\n` +
+                      `- Tổng tiền: ${amount}đ\n` +
+                      `- Danh sách file (${successItems.length}):\n`;
+    
+    successItems.forEach(r => { telegramMsg += `  + ${r.name} (${r.sku})\n`; });
+    if (failItems.length > 0) {
+      telegramMsg += `\n⚠️ <b>Lỗi cấp quyền (${failItems.length} file)</b>:\n`;
+      failItems.forEach(r => { telegramMsg += `  - ${r.name} (${r.sku})\n`; });
+    }
+
+    await sendTelegramNotification(telegramMsg);
+
+    // 7. Gửi Email thông báo cho khách hàng
+    const settings = await getSettings();
+    const emailHtmlRaw = settings.emailTemplate || `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #0891b2;">Cảm ơn bạn đã mua hàng tại KenVideo!</h2>
+        <p>Đơn hàng <b>{{order_id}}</b> của bạn đã được xử lý thành công.</p>
+        <p>Bạn đã có quyền truy cập vào các file sau bằng email <b>{{customer_email}}</b>:</p>
+        <ul style="padding-left: 20px;">
+          {{product_list}}
+        </ul>
+        <p style="font-size: 12px; color: #666; margin-top: 30px;">Nếu gặp khó khăn trong việc tải file, hãy liên hệ với chúng tôi qua Telegram.</p>
+      </div>
+    `;
+
+    let productListHtml = '';
+    results.forEach(r => {
+      if (r.success) {
+        productListHtml += `<li style="margin-bottom: 10px;"><strong>${r.name}</strong> (${r.sku})<br/><a href="${r.link}" style="color: #0891b2; text-decoration: none;">Link truy cập Drive &rarr;</a></li>`;
       }
     });
 
-    // 7. Gửi thông báo thành công qua Telegram
-    const msg = `✅ <b>Thành công</b>: Đơn hàng <b>${orderId}</b> đã thanh toán!\n` +
-                `- Sản phẩm: ${product.name} (${sku})\n` +
-                `- Khách hàng: ${customerEmail}\n` +
-                `- Đã cấp quyền tải tự động.`;
-    await sendTelegramNotification(msg);
+    let finalEmailHtml = emailHtmlRaw
+      .replace(/{{order_id}}/g, orderId)
+      .replace(/{{customer_email}}/g, customerEmail)
+      .replace(/{{product_list}}/g, productListHtml);
 
-    // 8. Gửi Email thông báo cho khách hàng
-    const settings = await getSettings();
-    if (settings.emailTemplate) {
-      let emailHtml = settings.emailTemplate;
-      
-      // Lấy link thư mục dựa trên file (mở rộng lấy thư mục cha nếu cần, hoặc gửi link preview)
-      const driveLink = `https://drive.google.com/file/d/${fileIdToGrant}/view`;
-
-      // Thay thế các biến số
-      emailHtml = emailHtml.replace(/{{order_id}}/g, orderId);
-      emailHtml = emailHtml.replace(/{{customer_email}}/g, customerEmail);
-      emailHtml = emailHtml.replace(/{{product_name}}/g, product.name);
-      emailHtml = emailHtml.replace(/{{sku}}/g, sku);
-      emailHtml = emailHtml.replace(/{{format}}/g, format);
-      emailHtml = emailHtml.replace(/{{drive_link}}/g, driveLink);
-
-      await sendEmail({
-        to: customerEmail,
-        subject: `[KenVideo] Đơn hàng ${orderId} đã hoàn tất - Truy cập Video của bạn`,
-        html: emailHtml,
-      });
-      console.log(`[Webhook] Đã gửi email cho ${customerEmail}`);
-    } else {
-      console.log(`[Webhook] Bỏ qua gửi email vì chưa cài đặt template.`);
+    // Fallback for old templates
+    if (results.length > 0) {
+      finalEmailHtml = finalEmailHtml
+        .replace(/{{product_name}}/g, results[0].name)
+        .replace(/{{sku}}/g, results[0].sku)
+        .replace(/{{drive_link}}/g, results[0].link || '#');
     }
+
+    await sendEmail({
+      to: customerEmail,
+      subject: `[KenVideo] Đơn hàng ${orderId} đã hoàn tất - Link tải Video của bạn`,
+      html: finalEmailHtml,
+    });
+
+    console.log(`[Webhook] Đã gửi email cho ${customerEmail}`);
+
+    return NextResponse.json({ success: true, message: 'Xử lý đơn hàng thành công' });
 
     return NextResponse.json({ success: true, message: 'Xử lý đơn hàng thành công' });
   } catch (error) {

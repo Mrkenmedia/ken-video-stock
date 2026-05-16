@@ -108,7 +108,13 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
         {/* Sticky Checkout Panel */}
         <div className="lg:col-span-1">
           <div className="sticky top-28 bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
-            <BuyPanel sku={product.sku} priceMp4={product.priceMp4} priceMov={product.priceMov} />
+            <BuyPanel 
+              sku={product.sku} 
+              name={product.name}
+              thumbnailUrl={product.thumbnailUrl}
+              priceMp4={product.priceMp4} 
+              priceMov={product.priceMov} 
+            />
           </div>
         </div>
       </div>

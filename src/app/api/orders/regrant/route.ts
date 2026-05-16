@@ -23,43 +23,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Không tìm thấy đơn hàng ${orderId}` }, { status: 404 });
     }
 
-    const sku = orderRow[3];
-    const format = orderRow[4]; // MP4 or MOV
+    const itemsStr = orderRow[3]; // "SKU1(MP4), SKU2(MOV)"
+    const itemList = itemsStr.split(',').map(s => {
+      const match = s.trim().match(/(.+)\((.+)\)/);
+      if (match) return { sku: match[1], format: match[2] };
+      return { sku: s.trim(), format: 'MP4' };
+    });
 
-    // 2. Tìm sản phẩm để lấy Drive File ID
     const products = await getProducts();
-    const product = products.find((p) => p.sku === sku);
+    const results: { email: string; sku: string; success: boolean }[] = [];
 
-    if (!product) {
-      return NextResponse.json({ error: `Không tìm thấy sản phẩm SKU: ${sku}` }, { status: 404 });
-    }
-
-    const fileIdToGrant =
-      format?.toUpperCase() === 'MOV' ? product.driveGocMovId : product.driveGocMp4Id;
-
-    if (!fileIdToGrant) {
-      return NextResponse.json(
-        { error: `Sản phẩm ${sku} thiếu File Gốc (${format}) trên Drive` },
-        { status: 400 }
-      );
-    }
-
-    // 3. Cấp quyền cho từng email
-    const results: { email: string; success: boolean }[] = [];
+    // 3. Cấp quyền cho từng email và từng sản phẩm
     for (const rawEmail of emails) {
       const email = rawEmail.trim().toLowerCase();
       if (!email) continue;
-      const ok = await grantDrivePermission(fileIdToGrant, email);
-      results.push({ email, success: ok });
+
+      for (const item of itemList) {
+        const product = products.find(p => p.sku === item.sku);
+        if (!product) continue;
+
+        const fileId = item.format.toUpperCase() === 'MOV' ? product.driveGocMovId : product.driveGocMp4Id;
+        if (!fileId) continue;
+
+        const ok = await grantDrivePermission(fileId, email);
+        results.push({ email, sku: item.sku, success: ok });
+      }
     }
 
-    const successEmails = results.filter((r) => r.success).map((r) => r.email);
-    const failEmails = results.filter((r) => !r.success).map((r) => r.email);
+    const successCount = results.filter((r) => r.success).length;
+    const failCount = results.length - successCount;
 
     // 4. Ghi log vào cột H của đơn hàng đó
     const rowIndex = rows.findIndex((r) => r[0] === orderId);
     const currentLog = orderRow[7] || '';
-    const newLog = `${currentLog}\n[${new Date().toLocaleString('vi-VN')}] Admin cấp lại file cho: ${successEmails.join(', ')}${failEmails.length ? ` | Lỗi: ${failEmails.join(', ')}` : ''}`;
+    const newLog = `${currentLog}\n[${new Date().toLocaleString('vi-VN')}] Admin cấp lại file cho: ${emails.join(', ')} (${successCount} file thành công)`;
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
@@ -70,10 +67,11 @@ export async function POST(request: Request) {
 
     // 5. Báo Telegram
     const msg =
-      `🔄 <b>Cấp lại File</b> cho đơn <b>${orderId}</b>\n` +
-      `- SKU: ${sku} (${format})\n` +
-      `- ✅ Thành công: ${successEmails.join(', ') || 'Không có'}\n` +
-      (failEmails.length ? `- ❌ Thất bại: ${failEmails.join(', ')}` : '');
+      `🔄 <b>Admin Cấp lại File</b> cho đơn <b>${orderId}</b>\n` +
+      `- Danh sách email: ${emails.join(', ')}\n` +
+      `- Tổng số file xử lý: ${results.length}\n` +
+      `- ✅ Thành công: ${successCount}\n` +
+      (failCount > 0 ? `- ❌ Thất bại: ${failCount}` : '');
     await sendTelegramNotification(msg);
 
     return NextResponse.json({
