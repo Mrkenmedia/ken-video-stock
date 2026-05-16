@@ -8,7 +8,13 @@ export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const products = await getProducts();
-  const product = products.find(p => (p.slug === params.slug || p.sku === params.slug) && p.status === 'active');
+  const decodedSlug = decodeURIComponent(params.slug).toLowerCase().trim();
+  const product = products.find(p => 
+    p.status === 'active' && 
+    ((p.slug || '').toLowerCase().trim() === decodedSlug || 
+     (p.sku || '').toLowerCase().trim() === decodedSlug ||
+     (p.sku || '').toLowerCase().trim().replace(/\./g, '-') === decodedSlug)
+  );
   
   if (!product) return { title: 'Không tìm thấy' };
 
@@ -30,7 +36,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const products = await getProducts();
-  const product = products.find(p => (p.slug === params.slug || p.sku === params.slug) && p.status === 'active');
+  const decodedSlug = decodeURIComponent(params.slug).toLowerCase().trim();
+  const product = products.find(p => 
+    p.status === 'active' && 
+    ((p.slug || '').toLowerCase().trim() === decodedSlug || 
+     (p.sku || '').toLowerCase().trim() === decodedSlug ||
+     (p.sku || '').toLowerCase().trim().replace(/\./g, '-') === decodedSlug)
+  );
 
   if (!product) {
     notFound();
