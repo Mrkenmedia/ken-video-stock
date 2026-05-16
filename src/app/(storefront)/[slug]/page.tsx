@@ -8,7 +8,7 @@ export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const products = await getProducts();
-  const product = products.find(p => p.slug === params.slug && p.status === 'active');
+  const product = products.find(p => (p.slug === params.slug || p.sku === params.slug) && p.status === 'active');
   
   if (!product) return { title: 'Không tìm thấy' };
 
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const products = await getProducts();
-  const product = products.find(p => p.slug === params.slug && p.status === 'active');
+  const product = products.find(p => (p.slug === params.slug || p.sku === params.slug) && p.status === 'active');
 
   if (!product) {
     notFound();

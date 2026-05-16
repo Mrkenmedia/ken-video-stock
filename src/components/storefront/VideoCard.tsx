@@ -10,8 +10,10 @@ export default function VideoCard({ product }: VideoCardProps) {
   const bgImage = product.thumbnailUrl
     || (product.driveDemoId ? `https://drive.google.com/thumbnail?id=${product.driveDemoId}&sz=w800` : '/placeholder-video.jpg');
 
+  const safeSlug = product.slug || product.sku;
+
   return (
-    <Link href={`/${product.slug}`} className="group relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 block">
+    <Link href={`/${safeSlug}`} className="group relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 block">
       {/* Thumbnail / Video Preview Area */}
       <div className="relative aspect-video overflow-hidden">
         <div 
