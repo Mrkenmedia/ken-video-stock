@@ -1,0 +1,121 @@
+# 🗺️ Lộ Trình Hoàn Thiện — Ken Video Stock Platform
+
+## Trạng thái hiện tại: ~60% Hoàn thành
+
+---
+
+## ✅ ĐÃ HOÀN THÀNH
+
+### 🖼️ Storefront (Trang Khách)
+- [x] Trang chủ (Hero, Filter tabs, Product Grid)
+- [x] Trang chi tiết sản phẩm (`/[slug]`) với video demo + bảng mua hàng
+- [x] Trang thanh toán (`/checkout`) với VietQR QR Code
+- [x] Trang đăng nhập (`/login`)
+- [x] Trang danh mục (`/categories`)
+- [x] Tự động hiển thị Thumbnail từ Google Drive
+
+### 🛠️ Admin Panel
+- [x] Dashboard admin (`/admin`)
+- [x] Quản lý Kho Video — Danh sách đầy đủ, thumbnail, file status (Demo/MP4/MOV)
+- [x] Thêm 1 Video thủ công (`/admin/products/new`)
+- [x] Sửa Video (`/admin/products/[sku]/edit`)
+- [x] Xóa Video (có xác nhận)
+- [x] Nhập hàng loạt từ Google Drive (`/admin/products/batch`) — tự quét thư mục, chống trùng lặp
+- [x] Tự động lấy thumbnail từ Drive khi nhập batch
+
+### ⚙️ Backend & Tích Hợp
+- [x] Google Sheets API (đọc/ghi/sửa/xóa sản phẩm)
+- [x] Google Drive API (quét thư mục, cấp quyền)
+- [x] Webhook xử lý thanh toán (`/api/webhooks/payment`) — nhận callback, cấp quyền Drive, cập nhật đơn hàng
+- [x] Telegram notification khi có đơn hàng mới / lỗi
+
+---
+
+## 🔴 CHƯA HOÀN THÀNH — ƯU TIÊN CAO
+
+### 1. Luồng Thanh Toán Thực Tế (CRITICAL)
+> **Vấn đề:** Trang `/checkout` đang dùng giá cứng (mock 250k/500k), không lấy giá thực từ sản phẩm. Mã đơn hàng tạo ngẫu nhiên không được lưu vào Sheets trước khi khách quét QR.
+
+**Cần làm:**
+- [ ] Fetch đúng sản phẩm (theo SKU + format từ URL) để hiển thị **giá thực** từ Google Sheets
+- [ ] **Tạo đơn hàng tạm** (pending) và lưu vào tab `Orders` ngay khi khách nhập email + bấm thanh toán (để webhook khớp được mã DH)
+- [ ] Nút Copy nội dung chuyển khoản (hiện chỉ là UI, chưa có `onClick`)
+- [ ] Kết nối thực tế với **SePay hoặc Casso** (cấu hình `WEBHOOK_SECRET` để xác thực)
+
+### 2. Xác thực Webhook an toàn
+> **Vấn đề:** Webhook tại `/api/webhooks/payment` không có xác thực Secret Key → bất kỳ ai cũng có thể POST vào để cấp quyền Drive giả mạo.
+
+**Cần làm:**
+- [ ] Thêm kiểm tra `Authorization` header hoặc `secret` trong payload
+- [ ] So sánh với biến `WEBHOOK_SECRET` trong `.env.local`
+
+### 3. Hệ thống Thể Loại (Tags) — Quản lý tập trung
+> **Vấn đề:** Tags hiện là text thuần, dễ sai chính tả. Filter tabs trên trang chủ đang là dữ liệu tĩnh cứng (Thiên nhiên, Công nghệ...).
+
+**Cần làm:**
+- [ ] Trang `/admin/tags` — thêm/sửa/xóa danh sách thể loại
+- [ ] Lưu danh sách Tags vào tab `Tags` trong Google Sheets
+- [ ] Trang chủ tự động render Filter Tabs từ danh sách Tags thực
+- [ ] Form Thêm/Sửa Video thay `input text` thành Checkbox list từ danh sách Tags
+
+---
+
+## 🟡 CHƯA HOÀN THÀNH — ƯU TIÊN TRUNG BÌNH
+
+### 4. Tìm Kiếm (Search)
+> **Vấn đề:** Ô tìm kiếm trên trang chủ chỉ là UI, chưa có chức năng.
+
+**Cần làm:**
+- [ ] Client-side search — lọc sản phẩm theo tên/tags khi gõ
+- [ ] (Nâng cao) Server-side search API `/api/search?q=...`
+
+### 5. Phân Quyền Admin (Bảo mật)
+> **Vấn đề:** Trang `/admin` hiện ai cũng truy cập được nếu biết URL.
+
+**Cần làm:**
+- [ ] Cài **NextAuth.js** (đăng nhập Google/Github cho Admin)
+- [ ] Viết `middleware.ts` chặn `/admin/*` — redirect về `/login` nếu chưa xác thực
+- [ ] Trang `/login` kết nối thực (hiện chỉ là UI)
+
+### 6. Dashboard Admin
+> **Vấn đề:** `/admin` hiện trống hoặc có nội dung placeholder.
+
+**Cần làm:**
+- [ ] Hiển thị thống kê: Tổng video, Đơn hàng hôm nay, Doanh thu tháng, Video thiếu file
+- [ ] Danh sách đơn hàng gần nhất
+
+### 7. Trang Quản lý Đơn hàng Admin (`/admin/orders`)
+- [ ] Hiển thị danh sách đơn từ tab `Orders` trong Sheets
+- [ ] Lọc theo trạng thái (pending / completed / failed)
+- [ ] Nút cấp quyền Drive thủ công (khi webhook lỗi)
+
+---
+
+## 🟢 NÂNG CẤP — ƯU TIÊN THẤP
+
+### 8. Filter Tabs trên Storefront
+- [ ] Click vào tab Thể loại → lọc video theo tag ngay lập tức (client-side)
+
+### 9. Trang Thành Công Sau Thanh Toán
+- [ ] Redirect sau khi webhook xác nhận → trang `/payment-success?orderId=DH1234`
+- [ ] Hiển thị link Google Drive file đã được cấp quyền
+
+### 10. Tối ưu Hình Ảnh (Next.js Image)
+- [ ] Cấu hình `next.config.js` để dùng `<Image>` (tối ưu hơn `<img>`) với domain `drive.google.com`
+
+### 11. Đổi Mật Khẩu / Cài Đặt Admin
+- [ ] Trang `/admin/settings` — cấu hình STK ngân hàng, Telegram Bot Token, mã khuyến mãi
+
+---
+
+## 📋 Tóm tắt Thứ tự làm tiếp
+
+| STT | Hạng mục | Độ khó | Thời gian ước tính |
+|-----|----------|--------|-------------------|
+| 1 | Fix giá thực + tạo đơn hàng tạm ở Checkout | Trung bình | ~30 phút |
+| 2 | Xác thực Webhook Secret | Dễ | ~10 phút |
+| 3 | Quản lý Thể Loại (Tags) | Trung bình | ~45 phút |
+| 4 | Chức năng Tìm Kiếm | Dễ | ~20 phút |
+| 5 | Bảo mật Admin bằng NextAuth | Khó | ~60 phút |
+| 6 | Dashboard thống kê | Trung bình | ~30 phút |
+| 7 | Trang Quản lý Đơn Hàng | Dễ | ~20 phút |

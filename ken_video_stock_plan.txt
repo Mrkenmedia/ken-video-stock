@@ -1,0 +1,126 @@
+# Ken Video Stock Platform - Kiến trúc & Kế hoạch triển khai
+
+## 1. Phân tích PRD (Dự án Ken Video Stock Platform)
+**Mục tiêu chính**: Xây dựng một nền tảng bán Stock Video tự động hoàn toàn (từ xem trước, thanh toán, đến tự động giao quyền xem/tải trên Drive).
+- **Tech Stack**: Next.js 14+ (App Router), Tailwind CSS.
+- **Backend/API**: API Routes của Next.js (hoặc Netlify Functions độc lập) để xử lý Webhook.
+- **Database/Storage**: Tận dụng triệt để hệ sinh thái Google (Sheets cho DB, Drive cho Storage).
+- **Payment**: Chuyển khoản VietQR tự động qua SePay/Casso (0% phí).
+- **Quy trình hoạt động**: Khách duyệt web -> Xem video demo -> Thêm vào giỏ hàng -> Hệ thống tính toán Giá lũy tiến hoặc Mã khuyến mãi -> Thanh toán VietQR -> Webhook xác nhận -> Backend tự gọi Google Drive API cấp quyền cho Email khách -> Gửi Email -> Báo Telegram.
+- **Tính năng mở rộng (Admin)**: Giao lại file đã mua cho khách qua email cũ hoặc email mới; thiết lập quy tắc khuyến mãi và giá lũy tiến độc quyền.
+
+## 2. Cấu trúc thư mục Next.js (App Router)
+Hệ thống sẽ được chia thành hai nhánh chính cho Storefront (Khách hàng) và Admin Dashboard:
+
+```text
+ken-video-platform/
+├── src/
+│   ├── app/
+│   │   ├── (storefront)/         # Route group: Giao diện Khách hàng
+│   │   │   ├── page.tsx          # Trang chủ (Danh sách video nổi bật, Filter, Search)
+│   │   │   ├── [slug]/           # Chi tiết sản phẩm & Trình phát Video Demo
+│   │   │   ├── checkout/         # Trang thanh toán (Hiển thị mã QR động)
+│   │   │   └── profile/          # Trang cá nhân: Lịch sử mua & tải file
+│   │   ├── admin/                # Route group: Giao diện Quản trị viên
+│   │   │   ├── layout.tsx        # Sidebar & Header riêng cho Admin
+│   │   │   ├── page.tsx          # Dashboard thống kê doanh thu, đơn hàng
+│   │   │   ├── products/         # Quản lý kho video (CRUD với Google Sheets)
+│   │   │   └── settings/         # Cấu hình khuyến mãi, Email Template
+│   │   ├── api/                  # Backend / Netlify Functions logic
+│   │   │   ├── webhooks/         # /api/webhooks/payment: Xử lý SePay/Casso ping
+│   │   │   ├── drive/            # /api/drive/grant: Cấp quyền xem thư mục
+│   │   │   └── sheets/           # Các endpoint giao tiếp với Sheets cho Client nếu cần
+│   ├── components/               
+│   │   ├── ui/                   # Reusable UI (Button, Input, Modal, Badge)
+│   │   ├── storefront/           # VideoCard, CategoryFilter, VideoPlayer
+│   │   └── admin/                # AdminTable, ProductForm, StatsCard
+│   ├── lib/                      # Các hàm tiện ích cốt lõi
+│   │   ├── google.ts             # Setup Google Auth & kết nối Sheets/Drive
+│   │   ├── telegram.ts           # Hàm push thông báo Telegram
+│   │   └── sepay.ts              # Hàm verify và xử lý webhook thanh toán
+│   ├── types/                    # TypeScript interfaces (Product, Order, SheetRow)
+├── public/                       # Hình ảnh tĩnh, watermark pattern, favicon
+├── tailwind.config.ts            # Cấu hình TailwindCSS
+└── .env.local                    # Chứa biến môi trường
+```
+
+## 3. Danh sách các Biến Môi Trường (`.env.local`)
+Các biến số này bắt buộc phải cấu hình khi code và trên Netlify Environment Variables:
+
+```env
+# ==========================================
+# 1. GOOGLE API (SHEETS & DRIVE)
+# ==========================================
+# Email của tài khoản Service Account
+GOOGLE_CLIENT_EMAIL="ken-stock@your-project-id.iam.gserviceaccount.com"
+# Private key (Cần chú ý xử lý ký tự \n nếu deploy Netlify)
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIB...[your_key]...\n-----END PRIVATE KEY-----\n"
+# ID của file Google Sheets đóng vai trò Database
+GOOGLE_SHEET_ID="1A2B3C4D5E6F7G8H9I0J..."
+
+# ==========================================
+# 2. SEPAY / CASSO (WEBHOOK THANH TOÁN)
+# ==========================================
+# Token hoặc Secret Key để verify Webhook gửi về là từ hệ thống thật
+SEPAY_WEBHOOK_SECRET="your_sepay_secret_here"
+# API Token để gọi API tạo link QR hoặc kiểm tra lịch sử (nếu cần)
+SEPAY_API_KEY="your_sepay_api_key_here"
+
+# ==========================================
+# 3. THÔNG BÁO TELEGRAM
+# ==========================================
+TELEGRAM_BOT_TOKEN="123456789:ABCdefGHIjklMNOpqrs"
+TELEGRAM_CHAT_ID="-100123456789"
+
+# ==========================================
+# 4. GỬI EMAIL CHĂM SÓC KHÁCH HÀNG (SMTP)
+# ==========================================
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="465"
+SMTP_USER="your-shop-email@gmail.com"
+SMTP_PASS="your_google_app_password"
+
+# ==========================================
+# 5. AUTHENTICATION (NEXTAUTH - TÙY CHỌN)
+# ==========================================
+# Để khách hàng đăng nhập Google xem lịch sử mua hàng
+GOOGLE_OAUTH_CLIENT_ID="your_oauth_client_id.apps.googleusercontent.com"
+GOOGLE_OAUTH_CLIENT_SECRET="your_oauth_client_secret"
+NEXTAUTH_SECRET="your_random_string_for_jwt_encryption"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+## 4. Giải pháp Kết Nối Google Sheets Bảo Mật Tối Đa bằng Service Account
+
+Phương pháp bảo mật nhất để tương tác với Hệ sinh thái Google (Sheets + Drive) trong môi trường Web mà không bao giờ lộ tài khoản cá nhân, đó là sử dụng **Google Service Account (Tài khoản dịch vụ)** kết hợp thực thi **Backend-only**.
+
+### Cách thiết lập & vận hành:
+1. **Tạo Robot (Service Account)**: Trong Google Cloud Console, tạo một Service Account. Google sẽ cấp cho bạn một `client_email` (VD: `ken-bot@project.iam.gserviceaccount.com`) và một file JSON chứa `private_key`.
+2. **Cấp quyền như một người dùng thật**:
+   - Mở file Database Google Sheets của bạn.
+   - Bấm Share (Chia sẻ) -> Thêm `client_email` vào với quyền **Editor**.
+   - Làm tương tự với các Thư mục/File Google Drive gốc mà bạn muốn cấp quyền cho khách.
+3. **Thực thi hoàn toàn trên Server**:
+   - Khởi tạo thư viện `google-auth-library` bên trong `src/lib/google.ts`.
+   - **Tuyệt đối** không dùng prefix `NEXT_PUBLIC_` cho bất kỳ biến Google nào để đảm bảo Key không bao giờ bị bundle vào mã Frontend.
+   - Khi frontend cần đọc danh sách sản phẩm, dùng Next.js App Router Data Fetching (`fetch` trực tiếp trên Server Components) gọi hàm `getProductsFromSheet()`.
+   - Khi có đơn hàng thanh toán thành công, **Webhook API (Server)** sẽ đọc biến môi trường, xác thực quyền, ghi vào Sheets (bảng Orders), và gọi API chia sẻ File Drive cho email của người mua.
+
+## 5. Logic Xử Lý Khuyến Mãi & Cấp Lại File (Chi Tiết Bổ Sung)
+
+### A. Logic Khuyến Mãi & Giá Lũy Tiến
+Tại trang Giỏ hàng / Thanh toán (Checkout), hệ thống sẽ tính giá dựa trên quy tắc ưu tiên sau:
+1. **Giá lũy tiến (Mua nhiều giảm sâu)**:
+   - Nếu giỏ hàng đạt đủ số lượng video theo mốc (Ví dụ: Mua từ 5 video trở lên giảm 20%), hệ thống sẽ ưu tiên áp dụng giá lũy tiến này.
+   - **Quy tắc**: Khi áp dụng mua theo giá lũy tiến, hệ thống sẽ khoá không cho phép nhập thêm bất kỳ mã khuyến mãi nào khác.
+2. **Mã Khuyến Mãi (Coupons)**:
+   - Chỉ được áp dụng khi giỏ hàng chưa đạt mốc giá lũy tiến.
+   - **Mã Đặc Biệt (Exclusive Promo)**: Khi khách nhập mã này, nó sẽ ghi đè lên tất cả. Không cho áp dụng chung với các khuyến mãi khác.
+   - **Mã Toàn Sàn (Global Promo)**: Áp dụng giảm giá đều trên toàn bộ file nếu không có Mã Đặc Biệt nào được dùng.
+
+### B. Chức Năng Cấp Lại File (Admin Dashboard)
+Tại trang Quản lý Đơn Hàng (`/admin/orders`), mỗi đơn hàng sẽ có nút **"Cấp Lại File"**.
+- Khi bấm vào, một Modal (Hộp thoại) sẽ hiện ra.
+- Hệ thống mặc định điền **Email cũ** của khách hàng lúc mua.
+- Admin có quyền **xóa email cũ, nhập một hoặc nhiều email mới** (phân cách bằng dấu phẩy).
+- Sau khi bấm "Xác nhận", Backend sẽ gọi Google Drive API để cấp quyền Viewer cho tất cả các email mới này đối với chính xác các File Video (SKU) nằm trong đơn hàng đó, đồng thời ghi Log vào Sheets để theo dõi.
