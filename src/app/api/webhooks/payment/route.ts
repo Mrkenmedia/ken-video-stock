@@ -141,7 +141,7 @@ export async function POST(request: Request) {
       });
       console.log(`[Webhook] Đã gửi email cho ${customerEmail}`);
     } else {
-      console.log(\`[Webhook] Bỏ qua gửi email vì chưa cài đặt template.\`);
+      console.log(`[Webhook] Bỏ qua gửi email vì chưa cài đặt template.`);
     }
 
     return NextResponse.json({ success: true, message: 'Xử lý đơn hàng thành công' });
