@@ -8,13 +8,13 @@ export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const products = await getProducts();
-  const decodedSlug = decodeURIComponent(params.slug).toLowerCase().trim();
-  const product = products.find(p => 
-    p.status === 'active' && 
-    ((p.slug || '').toLowerCase().trim() === decodedSlug || 
-     (p.sku || '').toLowerCase().trim() === decodedSlug ||
-     (p.sku || '').toLowerCase().trim().replace(/\./g, '-') === decodedSlug)
-  );
+  const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
+  
+  const target = slugify(decodeURIComponent(params.slug));
+  const product = products.find(p => {
+    if (p.status !== 'active') return false;
+    return slugify(p.slug || '') === target || slugify(p.sku || '') === target || slugify(p.name || '') === target;
+  });
   
   if (!product) return { title: 'Không tìm thấy' };
 
@@ -34,15 +34,17 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
+
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const products = await getProducts();
-  const decodedSlug = decodeURIComponent(params.slug).toLowerCase().trim();
-  const product = products.find(p => 
-    p.status === 'active' && 
-    ((p.slug || '').toLowerCase().trim() === decodedSlug || 
-     (p.sku || '').toLowerCase().trim() === decodedSlug ||
-     (p.sku || '').toLowerCase().trim().replace(/\./g, '-') === decodedSlug)
-  );
+  const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
+  
+  const target = slugify(decodeURIComponent(params.slug));
+  const product = products.find(p => {
+    if (p.status !== 'active') return false;
+    return slugify(p.slug || '') === target || slugify(p.sku || '') === target || slugify(p.name || '') === target;
+  });
+
 
   if (!product) {
     notFound();
