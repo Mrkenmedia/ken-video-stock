@@ -85,7 +85,7 @@ export async function getProducts(): Promise<Product[]> {
       }
     }
 
-    return rows.map((row) => {
+    return rows.map((row: any[]) => {
       const skuVal = row[2] || '';
       const originalPriceMp4 = parseFloat(row[9]) || 0;
       const originalPriceMov = parseFloat(row[11]) || 0;
@@ -379,7 +379,7 @@ export async function getTags(): Promise<string[]> {
     const response = await cachedSpreadsheetGet('Tags!A2:A');
     const rows = response.data.values;
     if (!rows) return [];
-    return rows.map(r => r[0] ?? '').filter(Boolean);
+    return rows.map((r: any[]) => r[0] ?? '').filter(Boolean);
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];
@@ -510,7 +510,7 @@ export async function getSettings(): Promise<Partial<Settings>> {
     if (!rows) return {};
     
     const settings: any = {};
-    rows.forEach(row => {
+    rows.forEach((row: any[]) => {
       if (row[0]) settings[row[0]] = row[1] || '';
     });
     return settings;
@@ -594,7 +594,7 @@ export async function getCoupons(): Promise<Coupon[]> {
     const rows = response.data.values;
     if (!rows) return [];
     
-    return rows.map((row) => ({
+    return rows.map((row: any[]) => ({
       code: row[0] || '',
       type: (row[1] as 'global' | 'exclusive') || 'global',
       discountValue: parseFloat(row[2]) || 0,
@@ -729,7 +729,7 @@ export async function getTiers(): Promise<{ minItems: number; discountPercent: n
     if (!rows) return [];
     
     return rows
-      .map((row) => ({
+      .map((row: any[]) => ({
         minItems: parseInt(row[0]) || 0,
         discountPercent: parseFloat(row[1]) || 0,
       }))
@@ -753,9 +753,9 @@ export async function getOrdersByEmail(email: string) {
     }
 
     // Filter by exact email match (case-insensitive)
-    const userOrders = rows.filter(row => row[2] && row[2].toLowerCase() === email.toLowerCase());
+    const userOrders = rows.filter((row: any[]) => row[2] && row[2].toLowerCase() === email.toLowerCase());
     
-    return userOrders.map((row) => ({
+    return userOrders.map((row: any[]) => ({
       orderId: row[0] || '',
       date: row[1] || '',
       email: row[2] || '',
@@ -816,7 +816,7 @@ export async function getBanners(): Promise<Banner[]> {
     if (!rows || rows.length === 0) return [];
     
     return rows
-      .map(row => ({
+      .map((row: any[]) => ({
         id: row[0] || '',
         title: row[1] || '',
         subtitle: row[2] || '',
