@@ -733,7 +733,7 @@ export async function getTiers(): Promise<{ minItems: number; discountPercent: n
         minItems: parseInt(row[0]) || 0,
         discountPercent: parseFloat(row[1]) || 0,
       }))
-      .sort((a, b) => b.minItems - a.minItems); // Sort descending to check biggest tier first
+      .sort((a: any, b: any) => b.minItems - a.minItems); // Sort descending to check biggest tier first
   } catch (error) {
     console.error('Error fetching tiers:', error);
     return [];
@@ -826,7 +826,7 @@ export async function getBanners(): Promise<Banner[]> {
         order: parseInt(row[6]) || 0,
       }))
       .filter(b => b.id)
-      .sort((a, b) => a.order - b.order);
+      .sort((a: any, b: any) => a.order - b.order);
   } catch (error) {
     console.error('Error fetching banners:', error);
     return [];
