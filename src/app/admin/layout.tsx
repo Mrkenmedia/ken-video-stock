@@ -30,6 +30,9 @@ export default function AdminLayout({
           <Link href="/admin/coupons" className={linkClass}>
             Mã Giảm Giá
           </Link>
+          <Link href="/admin/banners" className={linkClass}>
+            Quản lý Banner (Carousel)
+          </Link>
           <Link href="/admin/settings" className={linkClass}>
             Cài đặt &amp; Khuyến Mãi
           </Link>

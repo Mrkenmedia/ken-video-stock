@@ -55,7 +55,11 @@ export async function POST(request: Request) {
     const orderRowIndex = rows.findIndex((row) => row[0] === orderId);
     
     if (orderRowIndex === -1) {
-      await sendTelegramNotification(`⚠️ <b>Cảnh báo</b>: Nhận được tiền (${amount}đ) cho đ    const order = rows[orderRowIndex];
+      await sendTelegramNotification(`⚠️ <b>Cảnh báo</b>: Nhận được tiền (${amount}đ) cho đơn hàng <b>${orderId}</b> nhưng không tìm thấy đơn này trên Sheets.`);
+      return NextResponse.json({ success: true, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    const order = rows[orderRowIndex];
     const customerEmail = order[2];
     const itemsStr = order[3]; // "SKU1(MP4), SKU2(MOV)"
     const expectedAmount = parseFloat(order[5]);
@@ -71,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Phân tách danh sách SKU và cấp quyền từng file
-    const itemList = itemsStr.split(',').map(s => {
+    const itemList = itemsStr.split(',').map((s: string) => {
       const match = s.trim().match(/(.+)\((.+)\)/);
       if (match) return { sku: match[1], format: match[2] };
       return { sku: s.trim(), format: 'MP4' };

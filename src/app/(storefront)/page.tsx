@@ -1,4 +1,4 @@
-import { getProducts, getTags } from '@/lib/google';
+import { getProducts, getTags, getBanners } from '@/lib/google';
 import VideoCard from '@/components/storefront/VideoCard';
 import StorefrontGrid from '@/components/storefront/StorefrontGrid';
 
@@ -6,15 +6,16 @@ import StorefrontGrid from '@/components/storefront/StorefrontGrid';
 export const revalidate = 60;
 
 export default async function StorefrontHome() {
-  const [products, tags] = await Promise.all([
+  const [products, tags, banners] = await Promise.all([
     getProducts(),
-    getTags()
+    getTags(),
+    getBanners()
   ]);
   const activeProducts = products.filter(p => p.status === 'active');
 
   return (
     <div>
-      <StorefrontGrid products={activeProducts} tags={tags} />
+      <StorefrontGrid products={activeProducts} tags={tags} banners={banners} />
     </div>
   );
 }

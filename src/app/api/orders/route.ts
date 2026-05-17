@@ -1,21 +1,37 @@
 import { NextResponse } from 'next/server';
-import { sheets, SPREADSHEET_ID, getProducts, getTiers, getCoupons } from '@/lib/google';
+import { sheets, SPREADSHEET_ID, getProducts, getTiers, getCoupons, getSettings } from '@/lib/google';
+import { Settings } from '@/types';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { items, email, couponCode } = body; // items: [{ sku, format }]
+    const { items, email, couponCode, flashSaleStart } = body; // items: [{ sku, format }]
 
     if (!items || !Array.isArray(items) || items.length === 0 || !email) {
       return NextResponse.json({ error: 'Thiếu thông tin đơn hàng' }, { status: 400 });
     }
 
     // 1. Lấy dữ liệu thực từ Sheets để tính toán bảo mật
-    const [allProducts, allTiers, allCoupons] = await Promise.all([
+    const [allProducts, allTiers, allCoupons, settingsData] = await Promise.all([
       getProducts(),
       getTiers(),
-      getCoupons()
+      getCoupons(),
+      getSettings().catch(() => ({}))
     ]);
+
+    // Kiểm tra tính hợp lệ của Flash Sale
+    const settings = settingsData as Partial<Settings>;
+    const flashSalePercent = parseFloat(settings.newUserFlashSalePercent || '0');
+    const flashSaleDuration = parseFloat(settings.newUserFlashSaleDuration || '0');
+    let isFlashSaleActive = false;
+
+    if (flashSalePercent > 0 && flashSaleDuration > 0 && flashSaleStart) {
+      const start = parseInt(flashSaleStart);
+      const elapsed = Date.now() - start;
+      if (start > 0 && elapsed >= 0 && elapsed < (flashSaleDuration * 60 * 1000)) {
+        isFlashSaleActive = true;
+      }
+    }
 
     let rawTotal = 0;
     const validatedItems: string[] = [];
@@ -25,9 +41,13 @@ export async function POST(request: Request) {
       const product = allProducts.find(p => p.sku === item.sku && p.status === 'active');
       if (!product) continue;
 
-      const price = item.format.toUpperCase() === 'MOV' ? product.priceMov : product.priceMp4;
-      if (price > 0) {
-        rawTotal += price;
+      const basePrice = item.format.toUpperCase() === 'MOV' ? product.priceMov : product.priceMp4;
+      if (basePrice > 0) {
+        const finalPrice = isFlashSaleActive
+          ? Math.round((basePrice * (1 - flashSalePercent / 100)) / 1000) * 1000
+          : basePrice;
+
+        rawTotal += finalPrice;
         validatedItems.push(`${item.sku}(${item.format.toUpperCase()})`);
       }
     }
@@ -38,27 +58,31 @@ export async function POST(request: Request) {
 
     // 3. Tính toán giảm giá
     let finalPrice = rawTotal;
-    let appliedDiscountInfo = 'Giá gốc';
+    let appliedDiscountInfo = isFlashSaleActive
+      ? `Flash Sale Khách Mới (-${flashSalePercent}%)`
+      : 'Giá gốc';
 
-    // Ưu tiên 1: Giá lũy tiến (Tiers)
-    const activeTier = allTiers.find(t => validatedItems.length >= t.minItems);
-    if (activeTier) {
-      const discountAmount = Math.round((rawTotal * activeTier.discountPercent) / 100);
-      finalPrice = rawTotal - discountAmount;
-      appliedDiscountInfo = `Giảm ${activeTier.discountPercent}% (Tier ${activeTier.minItems}+ items)`;
-    } 
-    // Ưu tiên 2: Coupon (Chỉ khi không có Tier)
-    else if (couponCode) {
-      const coupon = allCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
-      if (coupon) {
-        let couponDiscount = 0;
-        if (coupon.discountValue <= 100 && coupon.discountValue > 0) {
-          couponDiscount = (rawTotal * coupon.discountValue) / 100;
-        } else {
-          couponDiscount = coupon.discountValue;
+    if (!isFlashSaleActive) {
+      // Ưu tiên 1: Giá lũy tiến (Tiers)
+      const activeTier = allTiers.find(t => validatedItems.length >= t.minItems);
+      if (activeTier) {
+        const discountAmount = Math.round((rawTotal * activeTier.discountPercent) / 100);
+        finalPrice = rawTotal - discountAmount;
+        appliedDiscountInfo = `Giảm ${activeTier.discountPercent}% (Tier ${activeTier.minItems}+ items)`;
+      } 
+      // Ưu tiên 2: Coupon (Chỉ khi không có Tier)
+      else if (couponCode) {
+        const coupon = allCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+        if (coupon) {
+          let couponDiscount = 0;
+          if (coupon.discountValue <= 100 && coupon.discountValue > 0) {
+            couponDiscount = (rawTotal * coupon.discountValue) / 100;
+          } else {
+            couponDiscount = coupon.discountValue;
+          }
+          finalPrice = Math.max(0, rawTotal - couponDiscount);
+          appliedDiscountInfo = `Mã: ${coupon.code}`;
         }
-        finalPrice = Math.max(0, rawTotal - couponDiscount);
-        appliedDiscountInfo = `Mã: ${coupon.code}`;
       }
     }
 

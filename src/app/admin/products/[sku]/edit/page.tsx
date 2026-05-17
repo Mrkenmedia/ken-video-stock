@@ -77,6 +77,35 @@ export default async function EditProductPage({ params }: { params: Promise<{ sk
             </div>
           </div>
 
+          {/* Section 1.5: Mô tả & Thông số chi tiết */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Mô tả & Thông số chi tiết</h3>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mô tả Video *</label>
+                <textarea required name="description" defaultValue={product.description} placeholder="Nhập mô tả chi tiết cho video..." rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Độ phân giải</label>
+                  <input type="text" name="resolution" defaultValue={product.resolution || "4K Ultra HD"} placeholder="VD: 4K Ultra HD" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Thời lượng</label>
+                  <input type="text" name="duration" defaultValue={product.duration || ""} placeholder="VD: 0:15" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Khung hình / FPS</label>
+                  <input type="text" name="fps" defaultValue={product.fps || "60 FPS"} placeholder="VD: 60 FPS" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Dung lượng file</label>
+                  <input type="text" name="size" defaultValue={product.size || ""} placeholder="VD: ~50MB" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Section 2: Media & ID Google Drive */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Liên kết Media</h3>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface ProductInfo {
   sku: string;
@@ -24,8 +25,16 @@ function CheckoutContent() {
   const router = useRouter();
   const { items, cartTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal } = useCart();
 
+  const { data: session } = useSession();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+
+  // Auto-fill email from session
+  useEffect(() => {
+    if (session?.user?.email && !email) {
+      setEmail(session.user.email);
+    }
+  }, [session, email]);
   const [step, setStep] = useState<Step>('info');
 
   const [orderId, setOrderId] = useState('');
@@ -130,6 +139,8 @@ function CheckoutContent() {
     setEmailError('');
     setCreatingOrder(true);
 
+    const flashSaleStart = localStorage.getItem('ken_flash_sale_start') || undefined;
+
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -137,7 +148,8 @@ function CheckoutContent() {
         body: JSON.stringify({ 
           items: items.map(i => ({ sku: i.sku, format: i.format })), 
           email, 
-          couponCode: appliedCoupon 
+          couponCode: appliedCoupon,
+          flashSaleStart
         }),
       });
       const data = await res.json();
@@ -168,9 +180,9 @@ function CheckoutContent() {
   return (
     <div className="container mx-auto px-6 py-12 max-w-4xl">
       <div className="mb-8">
-        <Link href={`/${sku}`} className="text-slate-400 hover:text-white text-sm flex items-center gap-2 mb-4">
+        <Link href="/cart" className="text-slate-400 hover:text-white text-sm flex items-center gap-2 mb-4">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-          Quay lại sản phẩm
+          Quay lại giỏ hàng
         </Link>
         <h1 className="text-3xl font-bold text-white">Thanh toán An toàn</h1>
       </div>

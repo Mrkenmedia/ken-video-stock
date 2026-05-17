@@ -19,6 +19,8 @@ interface CartContextType {
   cartCount: number;
   tierDiscountPercent: number;
   finalTotal: number;
+  isCartOpen: boolean;
+  setIsCartOpen: (open: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [tiers, setTiers] = useState<{ minItems: number; discountPercent: number }[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('ken_cart');
@@ -83,7 +86,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       cartTotal, 
       cartCount,
       tierDiscountPercent,
-      finalTotal
+      finalTotal,
+      isCartOpen,
+      setIsCartOpen
     }}>
       {children}
     </CartContext.Provider>

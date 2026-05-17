@@ -18,7 +18,7 @@ export async function GET(
     return NextResponse.json({
       sku: product.sku,
       name: product.name,
-      thumbnailUrl: product.thumbnailUrl || (product.driveDemoId ? `https://drive.google.com/thumbnail?id=${product.driveDemoId}&sz=w400` : ''),
+      thumbnailUrl: product.thumbnailUrl || ((product.driveDemoId || product.driveGocMp4Id || product.driveGocMovId) ? `https://drive.google.com/thumbnail?id=${product.driveDemoId || product.driveGocMp4Id || product.driveGocMovId}&sz=w400` : ''),
       priceMp4: product.priceMp4,
       priceMov: product.priceMov,
     });

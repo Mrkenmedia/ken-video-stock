@@ -22,6 +22,13 @@ export async function submitNewProduct(formData: FormData) {
     priceMov: parseFloat(formData.get('priceMov') as string) || 0,
     licenseType: (formData.get('licenseType') as string) || 'Standard',
     status: (formData.get('status') as 'active' | 'inactive') || 'active',
+    description: (formData.get('description') as string) || '',
+    resolution: (formData.get('resolution') as string) || '4K Ultra HD',
+    duration: (formData.get('duration') as string) || '',
+    fps: (formData.get('fps') as string) || '60 FPS',
+    size: (formData.get('size') as string) || '',
+    id: (formData.get('id') as string) || '',
+    stt: formData.get('stt') ? parseInt(formData.get('stt') as string) : undefined,
   };
 
   const success = await addProduct(productData);
@@ -55,6 +62,13 @@ export async function editProduct(formData: FormData) {
     priceMov: parseFloat(formData.get('priceMov') as string) || 0,
     licenseType: (formData.get('licenseType') as string) || 'Standard',
     status: (formData.get('status') as 'active' | 'inactive') || 'active',
+    description: (formData.get('description') as string) || '',
+    resolution: (formData.get('resolution') as string) || '4K Ultra HD',
+    duration: (formData.get('duration') as string) || '',
+    fps: (formData.get('fps') as string) || '60 FPS',
+    size: (formData.get('size') as string) || '',
+    id: (formData.get('id') as string) || '',
+    stt: formData.get('stt') ? parseInt(formData.get('stt') as string) : undefined,
   };
 
   const success = await updateProduct(sku, productData);

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSettings, updateSetting, ensureSettingsSheet } from '@/lib/google';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await ensureSettingsSheet();
@@ -15,13 +17,23 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    await ensureSettingsSheet();
+
+    // Check if it is a batch settings update
+    if (body.settings && typeof body.settings === 'object') {
+      const entries = Object.entries(body.settings);
+      for (const [key, value] of entries) {
+        await updateSetting(key, String(value));
+      }
+      return NextResponse.json({ success: true });
+    }
+
     const { key, value } = body;
 
     if (!key || value === undefined) {
       return NextResponse.json({ error: 'Missing key or value' }, { status: 400 });
     }
 
-    await ensureSettingsSheet();
     const success = await updateSetting(key, value);
 
     if (success) {

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const itemsStr = orderRow[3]; // "SKU1(MP4), SKU2(MOV)"
-    const itemList = itemsStr.split(',').map(s => {
+    const itemList = itemsStr.split(',').map((s: string) => {
       const match = s.trim().match(/(.+)\((.+)\)/);
       if (match) return { sku: match[1], format: match[2] };
       return { sku: s.trim(), format: 'MP4' };
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       results,
-      message: `Đã xử lý ${results.length} email. Thành công: ${successEmails.length}, Thất bại: ${failEmails.length}`,
+      message: `Đã xử lý ${results.length} email. Thành công: ${successCount}, Thất bại: ${failCount}`,
     });
   } catch (error) {
     console.error('Regrant error:', error);
