@@ -830,7 +830,7 @@ export async function getBanners(): Promise<Banner[]> {
     if (!rows || rows.length === 0) return [];
     
     return rows
-      .map((row: any[]) => ({
+      .map((row: any[]): Banner => ({
         id: row[0] || '',
         title: row[1] || '',
         subtitle: row[2] || '',
@@ -839,7 +839,7 @@ export async function getBanners(): Promise<Banner[]> {
         linkUrl: row[5] || '',
         order: parseInt(row[6]) || 0,
       }))
-      .filter(b => b.id)
+      .filter((b: Banner) => b.id)
       .sort((a: any, b: any) => a.order - b.order);
   } catch (error) {
     console.error('Error fetching banners:', error);

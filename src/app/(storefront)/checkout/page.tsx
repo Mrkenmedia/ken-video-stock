@@ -337,7 +337,7 @@ function CheckoutContent() {
               </button>
             </div>
             );
-          })}
+          })()}
 
           {step === 'qr' && (
             <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 text-center">

@@ -183,10 +183,13 @@ export default function VideoCard({ product }: VideoCardProps) {
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
     >
-      {/* Clickable Card Background Link */}
-      <Link href={`/${safeSlug}`} className="absolute inset-0 z-10">
-        <span className="sr-only">Xem chi tiết {product.name}</span>
-      </Link>
+      {/* Clickable Card Background to trigger Preview Modal */}
+      <button 
+        onClick={(e) => { e.preventDefault(); setShowPreviewModal(true); }}
+        className="absolute inset-0 z-10 w-full h-full text-left cursor-pointer"
+      >
+        <span className="sr-only">Xem trước {product.name}</span>
+      </button>
 
       {/* Static Thumbnail with Lazy Loading */}
       <img 
@@ -259,15 +262,17 @@ export default function VideoCard({ product }: VideoCardProps) {
         </h3>
       </div>
 
-      {/* Bottom Left: Preview / Similar */}
+      {/* Bottom Left: Chi Tiết */}
       <div className="absolute bottom-2 left-2 z-30 pointer-events-auto">
-        <button 
-          onClick={(e) => { e.preventDefault(); setShowPreviewModal(true); }}
+        <Link 
+          href={`/${safeSlug}`}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-          <span className="text-xs font-medium">Xem trước</span>
-        </button>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-xs font-medium">Chi tiết</span>
+        </Link>
       </div>
 
       {/* Bottom Right: Price & Cart */}
@@ -343,7 +348,7 @@ export default function VideoCard({ product }: VideoCardProps) {
             <div className="relative aspect-video bg-black shrink-0 min-h-0">
                {youtubeId ? (
                  <iframe
-                   src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                   src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&loop=1&playlist=${youtubeId}`}
                    className="w-full h-full border-0"
                    allow="autoplay; encrypted-media"
                    allowFullScreen
@@ -354,6 +359,7 @@ export default function VideoCard({ product }: VideoCardProps) {
                    src={`/api/drive-proxy?id=${demoId}`}
                    controls
                    autoPlay
+                   loop
                    className="w-full h-full object-contain"
                    controlsList="nodownload"
                  />

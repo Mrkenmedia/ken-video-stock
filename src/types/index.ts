@@ -63,6 +63,7 @@ export interface Settings {
   globalDiscountEnd?: string;
   newUserFlashSalePercent?: string;
   newUserFlashSaleDuration?: string;
+  paymentInstructions?: string;
 }
 
 export interface Banner {
