@@ -10,12 +10,16 @@ export async function POST(request: Request) {
     const webhookSecret = process.env.SEPAY_WEBHOOK_SECRET;
     
     if (webhookSecret && webhookSecret !== 'your_sepay_secret_here') {
-      const headerApiKey = request.headers.get('apikey') 
+      let headerApiKey = request.headers.get('apikey') 
         || request.headers.get('secure-token')
-        || request.headers.get('authorization')?.replace('Bearer ', '');
+        || request.headers.get('authorization')
+        || '';
       
-      if (headerApiKey !== webhookSecret) {
-        console.warn('⚠️ Webhook: Unauthorized request - Invalid secret key');
+      // Hỗ trợ bóc tách tiền tố "Apikey " của SePay hoặc "Bearer " của các hệ thống khác
+      headerApiKey = headerApiKey.replace(/^(Bearer|Apikey)\s+/i, '').trim();
+      
+      if (headerApiKey !== webhookSecret.trim()) {
+        console.warn(`⚠️ Webhook: Unauthorized request - Expected: "${webhookSecret.trim()}", Received: "${headerApiKey}"`);
         return NextResponse.json(
           { success: false, message: 'Unauthorized' }, 
           { status: 401 }
@@ -51,10 +55,11 @@ export async function POST(request: Request) {
     });
     
     const rows = orderRes.data.values || [];
-    // Tìm dòng chứa orderId (dòng 0 là header)
-    const orderRowIndex = rows.findIndex((row) => row[0] === orderId);
+    // Tìm dòng chứa orderId (dòng 0 là header) bằng cách trim và so sánh không phân biệt hoa thường
+    const orderRowIndex = rows.findIndex((row) => row[0]?.trim().toUpperCase() === orderId.trim().toUpperCase());
     
     if (orderRowIndex === -1) {
+      console.warn(`⚠️ Webhook: Order ID ${orderId} not found in Sheets. Rows loaded: ${rows.length}`);
       await sendTelegramNotification(`⚠️ <b>Cảnh báo</b>: Nhận được tiền (${amount}đ) cho đơn hàng <b>${orderId}</b> nhưng không tìm thấy đơn này trên Sheets.`);
       return NextResponse.json({ success: true, message: 'Không tìm thấy đơn hàng' });
     }
