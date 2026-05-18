@@ -9,7 +9,6 @@ async function init() {
 /** GET /api/tags – trả về danh sách toàn bộ tag */
 export async function GET() {
   try {
-    await init();
     const tags = await getTags();
     return NextResponse.json(tags);
   } catch (error) {

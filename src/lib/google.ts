@@ -27,7 +27,9 @@ export const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
 // --- GLOBAL IN-MEMORY CACHE ---
 // Giúp giảm tải 99% request lên Google Sheets API, chống lỗi "Quota exceeded"
 const promiseCache: Record<string, { promise: Promise<any>, timestamp: number }> = {};
-const CACHE_TTL_MS = 15000; // 15 seconds
+// 5 minutes – well within ISR revalidate=60s cycle, drastically reduces quota hits.
+// A cold server process will make at most 1 real API call per range per 5 min window.
+const CACHE_TTL_MS = 300000; // 5 minutes
 
 async function cachedSpreadsheetGet(range: string) {
   const now = Date.now();
@@ -234,6 +236,7 @@ export async function addProduct(product: Omit<Product, 'slug'> & { slug?: strin
         ]
       }
     });
+    delete promiseCache['Products!A2:S'];
     return true;
   } catch (error) {
     console.error('Error adding product to Sheets:', error);
@@ -287,6 +290,7 @@ export async function updateProduct(sku: string, product: Partial<Product>) {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [updatedRow] }
     });
+    delete promiseCache['Products!A2:S'];
     return true;
   } catch (error) {
     console.error(`Error updating product ${sku}:`, error);
@@ -335,6 +339,7 @@ export async function deleteProduct(sku: string) {
         ]
       }
     });
+    delete promiseCache['Products!A2:S'];
     return true;
   } catch (error) {
     console.error(`Error deleting product ${sku}:`, error);
@@ -398,6 +403,7 @@ export async function addTag(tag: string): Promise<boolean> {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [[tag]] },
     });
+    delete promiseCache['Tags!A2:A'];
     return true;
   } catch (error) {
     console.error('Error adding tag:', error);
@@ -421,6 +427,7 @@ export async function updateTag(oldTag: string, newTag: string): Promise<boolean
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [[newTag]] },
     });
+    delete promiseCache['Tags!A2:A'];
     return true;
   } catch (error) {
     console.error('Error updating tag:', error);
@@ -462,6 +469,7 @@ export async function deleteTag(tag: string): Promise<boolean> {
         ],
       },
     });
+    delete promiseCache['Tags!A2:A'];
     return true;
   } catch (error) {
     console.error('Error deleting tag:', error);
@@ -547,6 +555,7 @@ export async function updateSetting(key: string, value: string): Promise<boolean
         requestBody: { values: [[key, value]] },
       });
     }
+    delete promiseCache['Settings!A2:B'];
     return true;
   } catch (error) {
     console.error('Error updating setting:', error);
@@ -614,6 +623,7 @@ export async function addCoupon(coupon: Coupon): Promise<boolean> {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [[coupon.code.toUpperCase(), coupon.type, coupon.discountValue, coupon.condition || '']] },
     });
+    delete promiseCache['Coupons!A2:D'];
     return true;
   } catch (error) {
     console.error('Error adding coupon:', error);
@@ -633,6 +643,7 @@ export async function updateCoupon(oldCode: string, coupon: Coupon): Promise<boo
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [[coupon.code.toUpperCase(), coupon.type, coupon.discountValue, coupon.condition || '']] },
     });
+    delete promiseCache['Coupons!A2:D'];
     return true;
   } catch (error) {
     console.error('Error updating coupon:', error);
@@ -670,6 +681,7 @@ export async function deleteCoupon(code: string): Promise<boolean> {
         ],
       },
     });
+    delete promiseCache['Coupons!A2:D'];
     return true;
   } catch (error) {
     console.error('Error deleting coupon:', error);
@@ -810,7 +822,9 @@ export async function ensureBannersSheet(): Promise<void> {
 
 export async function getBanners(): Promise<Banner[]> {
   try {
-    await ensureBannersSheet();
+    // NOTE: ensureBannersSheet() must NOT be called here — it fires an extra
+    // uncached sheets.spreadsheets.get() on EVERY storefront render and is the
+    // primary cause of "Quota exceeded" errors. Call it only from admin routes.
     const response = await cachedSpreadsheetGet('Banners!A2:G');
     const rows = response.data.values;
     if (!rows || rows.length === 0) return [];
@@ -853,6 +867,7 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<boolean> {
         ]],
       },
     });
+    delete promiseCache['Banners!A2:G'];
     return true;
   } catch (error) {
     console.error('Error adding banner:', error);
@@ -892,6 +907,7 @@ export async function updateBanner(id: string, banner: Partial<Banner>): Promise
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [updatedRow] },
     });
+    delete promiseCache['Banners!A2:G'];
     return true;
   } catch (error) {
     console.error('Error updating banner:', error);
@@ -933,6 +949,7 @@ export async function deleteBanner(id: string): Promise<boolean> {
         ],
       },
     });
+    delete promiseCache['Banners!A2:G'];
     return true;
   } catch (error) {
     console.error('Error deleting banner:', error);

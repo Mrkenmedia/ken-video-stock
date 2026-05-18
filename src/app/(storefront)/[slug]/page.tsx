@@ -2,15 +2,40 @@ import { getProducts } from '@/lib/google';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { cache } from 'react';
 import BuyPanel from '@/components/storefront/BuyPanel';
 import VideoCard from '@/components/storefront/VideoCard';
 import { generateIdFromSku } from '@/lib/utils';
+
+/** Trích xuất Drive file ID từ full URL hoặc trả về nguyên bản */
+function extractDriveId(value: string): string {
+  if (!value) return '';
+  const m = value.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})|[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (m) return m[1] || m[2];
+  if (!value.includes('/') && !value.includes('?')) return value;
+  return value;
+}
+
+/** Trích xuất YouTube Video ID từ mọi dạng URL YouTube */
+function extractYouTubeId(value: string): string {
+  if (!value) return '';
+  const short = value.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (short) return short[1];
+  const long = value.match(/(?:v=|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/);
+  if (long) return long[1];
+  return '';
+}
+
+// cache() deduplicates calls within the same request:
+// generateMetadata() and the page component both call this,
+// but only ONE real Sheets API call fires per page render.
+const getCachedProducts = cache(getProducts);
 
 export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
-  const products = await getProducts();
+  const products = await getCachedProducts();
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
   
   const target = slugify(decodeURIComponent(resolvedParams.slug));
@@ -41,7 +66,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const products = await getProducts();
+  const products = await getCachedProducts();
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
   
   const target = slugify(decodeURIComponent(resolvedParams.slug));
@@ -57,15 +82,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  // Thumbnail: ưu tiên cột Sheets, fallback về Drive Demo, sau đó về File Gốc
-  const driveThumbId = product.driveDemoId || product.driveGocMp4Id || product.driveGocMovId;
+  // Trích xuất Drive ID thuần (xử lý cả trường hợp full URL)
+  const demoId = extractDriveId(product.driveDemoId);
+  const youtubeId = extractYouTubeId(product.driveDemoId);
+  const driveThumbId = demoId || extractDriveId(product.driveGocMp4Id) || extractDriveId(product.driveGocMovId);
   const thumbnail = product.thumbnailUrl
-    || (driveThumbId ? `https://drive.google.com/thumbnail?id=${driveThumbId}&sz=w800` : '');
-
-  // Chuyển Google Drive ID thành link embed
-  const videoDemoUrl = product.driveDemoId.includes('http') 
-    ? product.driveDemoId 
-    : `https://drive.google.com/file/d/${product.driveDemoId}/preview`;
+    || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
+    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}` : '');
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -73,13 +96,27 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         {/* Video Player Column */}
         <div className="lg:col-span-2 space-y-8">
           <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl shadow-cyan-900/20 group">
-            {/* Google Drive Preview Player */}
-            <iframe 
-              src={`https://drive.google.com/file/d/${product.driveDemoId}/preview`} 
-              className="w-full h-full border-0" 
-              allow="autoplay"
-              title={product.name}
-            />
+          {/* YouTube or Google Drive Preview Player */}
+            {youtubeId ? (
+              <iframe 
+                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
+                className="w-full h-full border-0" 
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                title={product.name}
+              />
+            ) : demoId ? (
+              <iframe 
+                src={`https://drive.google.com/file/d/${demoId}/preview`} 
+                className="w-full h-full border-0" 
+                allow="autoplay"
+                title={product.name}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-500">
+                <p>Video demo chưa có sẵn</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-900/40 rounded-[2.5rem] p-8 border border-slate-800/50 backdrop-blur-sm">
@@ -89,6 +126,22 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">{product.name}</h1>
                   <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-full text-xs font-mono border border-slate-700 font-bold">ID: {generateIdFromSku(product.sku)}</span>
                   <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30">Bản Demo</span>
+                  {/* Discount badge — tính từ giá gốc Sheets (server-side) */}
+                  {(() => {
+                    const base = product.priceMp4 > 0 ? product.priceMp4 : product.priceMov;
+                    const orig = product.priceMp4 > 0
+                      ? (product.originalPriceMp4 ?? 0)
+                      : (product.originalPriceMov ?? 0);
+                    if (orig > base && base > 0) {
+                      const pct = Math.round((1 - base / orig) * 100);
+                      return (
+                        <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-black border border-orange-400/30 shadow-lg shadow-orange-500/20">
+                          -{pct}% GIẢM
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div className="flex flex-wrap gap-2 mb-6">
                   {product.tags.map(tag => (
@@ -103,14 +156,16 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               </div>
               
               <div className="shrink-0 w-full md:w-auto">
+                {demoId && (
                 <a 
-                  href={`https://drive.google.com/uc?export=download&id=${product.driveDemoId}`}
+                  href={`https://drive.google.com/uc?export=download&id=${demoId}`}
                   target="_blank"
                   className="flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl shadow-orange-600/20 active:scale-95 w-full"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   Tải bản Demo miễn phí
                 </a>
+                )}
                 <p className="text-[10px] text-slate-500 text-center mt-3 uppercase tracking-widest font-bold">
                   Dung lượng: {product.size || '~50MB'} • {product.driveGocMp4Id && product.driveGocMovId ? 'MP4 & MOV' : (product.driveGocMovId ? 'MOV' : 'MP4')}
                 </p>

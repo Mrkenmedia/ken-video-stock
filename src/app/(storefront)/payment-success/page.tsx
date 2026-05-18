@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getSettings } from '@/lib/google';
 
 export default async function PaymentSuccessPage({
   searchParams,
@@ -7,6 +8,14 @@ export default async function PaymentSuccessPage({
 }) {
   const resolvedParams = await searchParams;
   const orderId = resolvedParams.orderId;
+
+  let paymentInstructions = '';
+  try {
+    const settings = await getSettings();
+    paymentInstructions = settings.paymentInstructions || '';
+  } catch (e) {
+    console.error('Failed to load settings in success page:', e);
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
@@ -44,6 +53,16 @@ export default async function PaymentSuccessPage({
             </div>
           </div>
         </div>
+
+        {/* Hướng dẫn thêm từ Admin */}
+        {paymentInstructions && (
+          <div className="bg-slate-950 rounded-2xl p-6 text-left border border-slate-800 mb-8 prose prose-invert max-w-none text-slate-300 text-sm overflow-hidden">
+            <h3 className="text-white font-medium mb-3 flex items-center gap-2 text-sm font-semibold">
+              📌 Hướng dẫn & Lưu ý thêm:
+            </h3>
+            <div dangerouslySetInnerHTML={{ __html: paymentInstructions }} className="space-y-2" />
+          </div>
+        )}
 
         <Link 
           href="/" 

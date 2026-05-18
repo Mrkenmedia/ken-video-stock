@@ -148,21 +148,38 @@ export async function POST(request: Request) {
     let productListHtml = '';
     results.forEach(r => {
       if (r.success) {
-        productListHtml += `<li style="margin-bottom: 10px;"><strong>${r.name}</strong> (${r.sku})<br/><a href="${r.link}" style="color: #0891b2; text-decoration: none;">Link truy cập Drive &rarr;</a></li>`;
+        productListHtml += `<li style="margin-bottom: 12px; list-style-type: none; padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <strong style="color: #0f172a; font-size: 14px;">${r.name}</strong> <span style="font-size: 11px; color: #64748b; font-family: monospace;">(${r.sku})</span><br/>
+          <a href="${r.link}" target="_blank" style="display: inline-block; margin-top: 6px; color: #0891b2; text-decoration: none; font-weight: bold; font-size: 13px;">Truy cập Tải File (Google Drive) &rarr;</a>
+        </li>`;
       }
     });
 
-    let finalEmailHtml = emailHtmlRaw
-      .replace(/{{order_id}}/g, orderId)
-      .replace(/{{customer_email}}/g, customerEmail)
-      .replace(/{{product_list}}/g, productListHtml);
+    let finalEmailHtml = emailHtmlRaw;
 
-    // Fallback for old templates
-    if (results.length > 0) {
+    if (finalEmailHtml.includes('{{product_list}}')) {
       finalEmailHtml = finalEmailHtml
-        .replace(/{{product_name}}/g, results[0].name)
-        .replace(/{{sku}}/g, results[0].sku)
-        .replace(/{{drive_link}}/g, results[0].link || '#');
+        .replace(/{{order_id}}/g, orderId)
+        .replace(/{{customer_email}}/g, customerEmail)
+        .replace(/{{product_list}}/g, `<ul style="padding: 0; margin: 0;">${productListHtml}</ul>`);
+    } else {
+      // Fallback cho template cũ không có {{product_list}}
+      const productNames = results.filter(r => r.success).map(r => `• ${r.name} (${r.sku})`).join('<br/>');
+      const firstLink = results.find(r => r.success)?.link || '#';
+
+      // Tự động dựng danh sách đầy đủ đẹp mắt
+      let fullLinksList = `<div style="margin-top: 15px; padding: 15px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <p style="margin: 0 0 12px 0; font-weight: bold; color: #0f172a; font-size: 14px;">Danh sách Video bản quyền trong đơn hàng của bạn:</p>
+        <ul style="padding: 0; margin: 0;">${productListHtml}</ul>
+      </div>`;
+
+      finalEmailHtml = finalEmailHtml
+        .replace(/{{order_id}}/g, orderId)
+        .replace(/{{customer_email}}/g, customerEmail)
+        .replace(/{{product_name}}/g, productNames)
+        .replace(/{{sku}}/g, results.filter(r => r.success).map(r => r.sku).join(', '))
+        .replace(/{{drive_link}}/g, firstLink)
+        + `<br/>${fullLinksList}`;
     }
 
     await sendEmail({

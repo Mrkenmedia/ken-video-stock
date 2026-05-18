@@ -33,7 +33,8 @@ export async function POST(request: Request) {
       }
     }
 
-    let rawTotal = 0;
+    let baseTotal = 0;
+    let flashSaleTotal = 0;
     const validatedItems: string[] = [];
 
     // 2. Tính giá gốc và kiểm tra tồn tại
@@ -43,11 +44,13 @@ export async function POST(request: Request) {
 
       const basePrice = item.format.toUpperCase() === 'MOV' ? product.priceMov : product.priceMp4;
       if (basePrice > 0) {
-        const finalPrice = isFlashSaleActive
+        baseTotal += basePrice;
+        
+        const fsPrice = isFlashSaleActive
           ? Math.round((basePrice * (1 - flashSalePercent / 100)) / 1000) * 1000
           : basePrice;
+        flashSaleTotal += fsPrice;
 
-        rawTotal += finalPrice;
         validatedItems.push(`${item.sku}(${item.format.toUpperCase()})`);
       }
     }
@@ -56,33 +59,64 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Không có sản phẩm hợp lệ trong đơn hàng' }, { status: 400 });
     }
 
-    // 3. Tính toán giảm giá
-    let finalPrice = rawTotal;
-    let appliedDiscountInfo = isFlashSaleActive
-      ? `Flash Sale Khách Mới (-${flashSalePercent}%)`
-      : 'Giá gốc';
+    // 3. Tính toán giảm giá và kiểm tra Coupon
+    let appliedCoupon = null;
+    let isExclusive = false;
+    if (couponCode) {
+      appliedCoupon = allCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+      if (appliedCoupon) {
+        isExclusive = appliedCoupon.type === 'exclusive';
+      }
+    }
 
-    if (!isFlashSaleActive) {
-      // Ưu tiên 1: Giá lũy tiến (Tiers)
-      const activeTier = allTiers.find(t => validatedItems.length >= t.minItems);
-      if (activeTier) {
-        const discountAmount = Math.round((rawTotal * activeTier.discountPercent) / 100);
-        finalPrice = rawTotal - discountAmount;
-        appliedDiscountInfo = `Giảm ${activeTier.discountPercent}% (Tier ${activeTier.minItems}+ items)`;
-      } 
-      // Ưu tiên 2: Coupon (Chỉ khi không có Tier)
-      else if (couponCode) {
-        const coupon = allCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
-        if (coupon) {
-          let couponDiscount = 0;
-          if (coupon.discountValue <= 100 && coupon.discountValue > 0) {
-            couponDiscount = (rawTotal * coupon.discountValue) / 100;
-          } else {
-            couponDiscount = coupon.discountValue;
-          }
-          finalPrice = Math.max(0, rawTotal - couponDiscount);
-          appliedDiscountInfo = `Mã: ${coupon.code}`;
+    let finalPrice = baseTotal;
+    let appliedDiscountInfo = 'Giá gốc';
+
+    if (isExclusive && appliedCoupon) {
+      // Loại 2: Độc quyền (Không áp dụng bất kỳ khuyến mãi nào khác)
+      let discountAmount = 0;
+      if (appliedCoupon.discountValue <= 100 && appliedCoupon.discountValue > 0) {
+        discountAmount = (baseTotal * appliedCoupon.discountValue) / 100;
+      } else {
+        discountAmount = appliedCoupon.discountValue;
+      }
+      if (discountAmount > baseTotal) discountAmount = baseTotal;
+      
+      finalPrice = baseTotal - discountAmount;
+      appliedDiscountInfo = `Mã độc quyền: ${appliedCoupon.code}`;
+    } else {
+      // Loại 1: Cộng dồn (Áp dụng trên giá đã giảm của Tier hoặc Flash Sale)
+      let currentTotal = baseTotal;
+      const appliedInfoParts = [];
+
+      if (isFlashSaleActive) {
+        currentTotal = flashSaleTotal;
+        appliedInfoParts.push(`Flash Sale Khách Mới (-${flashSalePercent}%)`);
+      } else {
+        const activeTier = allTiers.find(t => validatedItems.length >= t.minItems);
+        if (activeTier) {
+          const tierDiscount = Math.round((currentTotal * activeTier.discountPercent) / 100);
+          currentTotal -= tierDiscount;
+          appliedInfoParts.push(`Tier (-${activeTier.discountPercent}%)`);
         }
+      }
+
+      if (appliedCoupon) {
+        let discountAmount = 0;
+        if (appliedCoupon.discountValue <= 100 && appliedCoupon.discountValue > 0) {
+          discountAmount = (currentTotal * appliedCoupon.discountValue) / 100;
+        } else {
+          discountAmount = appliedCoupon.discountValue;
+        }
+        if (discountAmount > currentTotal) discountAmount = currentTotal;
+        
+        currentTotal -= discountAmount;
+        appliedInfoParts.push(`Mã: ${appliedCoupon.code}`);
+      }
+
+      finalPrice = currentTotal;
+      if (appliedInfoParts.length > 0) {
+        appliedDiscountInfo = appliedInfoParts.join(' + ');
       }
     }
 

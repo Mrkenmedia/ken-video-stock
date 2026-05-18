@@ -7,7 +7,6 @@ async function init() {
 
 export async function GET() {
   try {
-    await init();
     const coupons = await getCoupons();
     return NextResponse.json(coupons);
   } catch (error) {

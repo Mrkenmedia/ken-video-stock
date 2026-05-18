@@ -44,6 +44,19 @@ export default function BuyPanel({
   const finalOriginalPriceMp4 = isFlashSaleActive ? priceMp4 : originalPriceMp4;
   const finalOriginalPriceMov = isFlashSaleActive ? priceMov : originalPriceMov;
 
+  // Tính % giảm giá để hiển thị badge nổi bật
+  let discountBadgePct = 0;
+  if (isFlashSaleActive && flashSalePercent > 0) {
+    discountBadgePct = flashSalePercent;
+  } else {
+    // Lấy từ giá gốc của MP4 hoặc MOV (ưu tiên MP4 nếu có)
+    if (hasMp4 && originalPriceMp4 && originalPriceMp4 > priceMp4 && priceMp4 > 0) {
+      discountBadgePct = Math.round((1 - priceMp4 / originalPriceMp4) * 100);
+    } else if (hasMov && originalPriceMov && originalPriceMov > priceMov && priceMov > 0) {
+      discountBadgePct = Math.round((1 - priceMov / originalPriceMov) * 100);
+    }
+  }
+
   const [format, setFormat] = useState<'MP4' | 'MOV'>(
     (finalPriceMp4 > 0 && hasMp4) ? 'MP4' : 'MOV'
   );
@@ -53,11 +66,13 @@ export default function BuyPanel({
   const currentPrice = format === 'MOV' ? finalPriceMov : finalPriceMp4;
 
   const handleAddToCart = () => {
+    // Lưu GIÁ GỐC — CartContext sẽ áp Flash Sale động
+    const basePriceToStore = format === 'MOV' ? priceMov : priceMp4;
     addToCart({
       sku,
       name,
       format,
-      price: currentPrice,
+      price: basePriceToStore,
       thumbnailUrl,
     });
     setAdded(true);
@@ -65,11 +80,12 @@ export default function BuyPanel({
   };
 
   const handleBuyNow = () => {
+    const basePriceToStore = format === 'MOV' ? priceMov : priceMp4;
     addToCart({
       sku,
       name,
       format,
-      price: currentPrice,
+      price: basePriceToStore,
       thumbnailUrl,
     });
     router.push('/checkout');
@@ -77,6 +93,26 @@ export default function BuyPanel({
 
   return (
     <div className="w-full">
+
+      {/* Discount Badge — hiện nổi bật nếu có giảm giá */}
+      {discountBadgePct > 0 && (
+        <div className="mb-5 flex items-center gap-3 bg-gradient-to-r from-orange-500/15 to-red-500/10 border border-orange-500/30 rounded-2xl px-4 py-3">
+          <span className="text-2xl font-black text-orange-400 tabular-nums">
+            -{discountBadgePct}%
+          </span>
+          <div>
+            <p className="text-sm font-bold text-orange-300 leading-tight">
+              {isFlashSaleActive ? '🔥 Flash Sale đang diễn ra!' : '🎉 Đang giảm giá'}
+            </p>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              {isFlashSaleActive
+                ? 'Ưu đãi giới hạn theo thời gian'
+                : 'So với giá niêm yết ban đầu'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
         <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
         Chọn định dạng mua

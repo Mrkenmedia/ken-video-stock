@@ -127,8 +127,8 @@ export default function AdminCouponsPage() {
                   value={formData.type}
                   onChange={e => setFormData({...formData, type: e.target.value as 'global' | 'exclusive'})}
                 >
-                  <option value="global">Global (Áp dụng chung)</option>
-                  <option value="exclusive">Exclusive (Độc quyền)</option>
+                  <option value="global">Loại 1 (Cho phép cộng dồn giảm giá)</option>
+                  <option value="exclusive">Loại 2 (Chỉ sử dụng duy nhất mã giảm giá)</option>
                 </select>
               </div>
 
@@ -218,7 +218,7 @@ export default function AdminCouponsPage() {
                   <td className="p-5 font-bold text-teal-600 uppercase text-lg">{c.code}</td>
                   <td className="p-5 text-gray-600">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${c.type === 'global' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                      {c.type === 'global' ? 'Global' : 'Exclusive'}
+                      {c.type === 'global' ? 'Loại 1 (Cộng dồn)' : 'Loại 2 (Độc quyền)'}
                     </span>
                   </td>
                   <td className="p-5 text-gray-900 font-bold text-lg">

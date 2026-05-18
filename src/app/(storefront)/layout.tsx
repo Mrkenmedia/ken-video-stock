@@ -10,9 +10,11 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500/30">
-      <FlashSaleBanner />
-      {/* Premium Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
+      {/* Sticky wrapper: banner + navbar scroll together and stay fixed at top */}
+      <div className="sticky top-0 z-50">
+        <FlashSaleBanner />
+        {/* Premium Navbar */}
+        <header className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all duration-300">
@@ -53,6 +55,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
           </div>
         </div>
       </header>
+      </div>{/* /sticky wrapper */}
 
       {/* Main Content */}
       <main className="min-h-[calc(100vh-160px)]">

@@ -4,9 +4,9 @@ import { useCart } from '@/contexts/CartContext';
 import Link from 'next/link';
 
 export default function CartPage() {
-  const { items, removeFromCart, cartTotal, tierDiscountPercent, finalTotal } = useCart();
+  const { effectiveItems, removeFromCart, effectiveTotal, tierDiscountPercent, finalTotal } = useCart();
 
-  if (items.length === 0) {
+  if (effectiveItems.length === 0) {
     return (
       <div className="container mx-auto px-6 py-20 text-center min-h-[60vh] flex flex-col items-center justify-center">
         <svg className="w-24 h-24 text-slate-700 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -26,7 +26,7 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Danh sách sản phẩm */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
+          {effectiveItems.map((item) => (
             <div key={`${item.sku}-${item.format}`} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex gap-4 items-center">
               {item.thumbnailUrl && (
                 <div className="w-24 h-16 rounded-lg overflow-hidden shrink-0">
@@ -43,7 +43,10 @@ export default function CartPage() {
                 </div>
               </div>
               <div className="text-right shrink-0 pr-4">
-                <p className="text-cyan-400 font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}</p>
+                <p className="text-cyan-400 font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.effectivePrice)}</p>
+                {item.effectivePrice < item.price && (
+                  <p className="text-[11px] text-slate-500 line-through">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}</p>
+                )}
               </div>
               <button 
                 onClick={() => removeFromCart(item.sku, item.format)}
@@ -64,16 +67,16 @@ export default function CartPage() {
             <div className="space-y-4 mb-6">
               <div className="flex justify-between text-slate-400">
                 <span>Số lượng sản phẩm</span>
-                <span className="text-white">{items.length} file</span>
+                <span className="text-white">{effectiveItems.length} file</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Tạm tính</span>
-                <span className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
+                <span className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(effectiveTotal)}</span>
               </div>
               {tierDiscountPercent > 0 && (
                 <div className="flex justify-between text-green-400 font-medium">
                   <span>Giảm giá số lượng ({tierDiscountPercent}%)</span>
-                  <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal - finalTotal)}</span>
+                  <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(effectiveTotal - finalTotal)}</span>
                 </div>
               )}
             </div>

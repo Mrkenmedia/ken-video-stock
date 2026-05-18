@@ -103,8 +103,9 @@ export default async function NewProductPage() {
                 <input type="url" name="thumbnailUrl" placeholder="https://..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Google Drive ID - Video Demo (Bắt buộc) *</label>
-                <input required type="text" name="driveDemoId" placeholder="VD: 1Bxy..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Video Demo - Google Drive ID hoặc YouTube URL (Bắt buộc) *</label>
+                <input required type="text" name="driveDemoId" placeholder="Drive ID: 1Bxy...  |  YouTube: https://youtu.be/..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                <p className="mt-1.5 text-xs text-gray-400">Hỗ trợ: Google Drive ID, link Drive đầy đủ, link YouTube (watch/youtu.be/shorts)</p>
               </div>
             </div>
           </div>

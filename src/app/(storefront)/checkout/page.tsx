@@ -23,7 +23,7 @@ import { useCart } from '@/contexts/CartContext';
 
 function CheckoutContent() {
   const router = useRouter();
-  const { items, cartTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal } = useCart();
+  const { items, effectiveTotal, cartTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal, isFlashSaleActive } = useCart();
 
   const { data: session } = useSession();
   const [email, setEmail] = useState('');
@@ -42,10 +42,24 @@ function CheckoutContent() {
   const [transferContent, setTransferContent] = useState('');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [paymentInstructions, setPaymentInstructions] = useState('');
+
+  // Fetch settings for payment instructions
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.paymentInstructions) {
+          setPaymentInstructions(data.paymentInstructions);
+        }
+      })
+      .catch(e => console.error('Failed to load settings:', e));
+  }, []);
 
   // Coupon state
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [appliedCouponType, setAppliedCouponType] = useState<'global' | 'exclusive' | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponError, setCouponError] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -64,7 +78,7 @@ function CheckoutContent() {
     if (step === 'qr' && orderId) {
       intervalId = setInterval(async () => {
         try {
-          const res = await fetch(`/api/orders/${orderId}`);
+          const res = await fetch(`/api/orders/${orderId}?t=${Date.now()}`, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             if (data.status === 'completed') {
@@ -92,10 +106,6 @@ function CheckoutContent() {
   }, [transferContent]);
 
   const handleApplyCoupon = async () => {
-    if (tierDiscountPercent > 0) {
-      setCouponError('Không thể dùng mã giảm giá khi đã có ưu đãi mua nhiều.');
-      return;
-    }
     if (!couponInput) {
       setCouponError('Vui lòng nhập mã giảm giá.');
       return;
@@ -106,17 +116,19 @@ function CheckoutContent() {
       const res = await fetch('/api/coupons/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput, cartTotal: cartTotal })
+        body: JSON.stringify({ code: couponInput, cartTotal: cartTotal, cartFinalTotal: cartFinalTotal })
       });
       const data = await res.json();
       if (res.ok) {
         setAppliedCoupon(data.couponCode);
         setDiscountAmount(data.discountAmount);
+        setAppliedCouponType(data.couponType);
         setCouponError('');
       } else {
         setCouponError(data.error || 'Mã không hợp lệ.');
         setAppliedCoupon('');
         setDiscountAmount(0);
+        setAppliedCouponType(null);
       }
     } catch (e) {
       setCouponError('Lỗi kết nối khi áp dụng mã.');
@@ -128,6 +140,7 @@ function CheckoutContent() {
   const removeCoupon = () => {
     setAppliedCoupon('');
     setDiscountAmount(0);
+    setAppliedCouponType(null);
     setCouponInput('');
   };
 
@@ -224,11 +237,12 @@ function CheckoutContent() {
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
               Mã giảm giá
               {tierDiscountPercent > 0 && <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-1 rounded">Đã áp dụng ưu đãi mua nhiều</span>}
+              {isFlashSaleActive && <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-1 rounded">Ưu đãi Flash Sale tối đa</span>}
             </h2>
             {appliedCoupon ? (
               <div className="flex items-center justify-between bg-green-500/10 border border-green-500/50 rounded-xl px-4 py-3">
                 <div>
-                  <p className="text-green-400 font-bold uppercase">{appliedCoupon}</p>
+                  <p className="text-green-400 font-bold uppercase">{appliedCoupon} {appliedCouponType === 'exclusive' ? '(Độc quyền)' : ''}</p>
                   <p className="text-xs text-green-500 mt-1">Đã giảm {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}</p>
                 </div>
                 <button onClick={removeCoupon} disabled={step === 'qr'} className="text-slate-400 hover:text-white p-2">
@@ -239,15 +253,15 @@ function CheckoutContent() {
               <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder={tierDiscountPercent > 0 ? "Không dùng chung với ưu đãi mua nhiều" : "Nhập mã tại đây..."}
+                  placeholder="Nhập mã tại đây..."
                   className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition uppercase disabled:opacity-30"
                   value={couponInput}
                   onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
-                  disabled={step === 'qr' || tierDiscountPercent > 0}
+                  disabled={step === 'qr'}
                 />
                 <button 
                   onClick={handleApplyCoupon}
-                  disabled={!couponInput || applyingCoupon || step === 'qr' || tierDiscountPercent > 0}
+                  disabled={!couponInput || applyingCoupon || step === 'qr'}
                   className="bg-slate-800 hover:bg-slate-700 text-white font-medium px-6 py-3 rounded-xl transition-colors disabled:opacity-50"
                 >
                   {applyingCoupon ? 'Đang thử...' : 'Áp dụng'}
@@ -273,24 +287,31 @@ function CheckoutContent() {
           </div>
 
           {/* Order total + CTA */}
-          {step === 'info' && (
+          {step === 'info' && (() => {
+            const isExclusive = appliedCouponType === 'exclusive';
+            const displaySubtotal = isExclusive ? cartTotal : effectiveTotal;
+            const finalPriceToPay = isExclusive 
+              ? Math.max(0, cartTotal - discountAmount) 
+              : Math.max(0, cartFinalTotal - discountAmount);
+
+            return (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Tạm tính ({items.length} file)</span>
-                  <span className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
+                  <span className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(displaySubtotal)}</span>
                 </div>
                 
-                {tierDiscountPercent > 0 && (
+                {!isExclusive && tierDiscountPercent > 0 && (
                   <div className="flex justify-between text-sm text-green-400">
                     <span>Ưu đãi mua nhiều (-{tierDiscountPercent}%)</span>
-                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal - cartFinalTotal)}</span>
+                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(effectiveTotal - cartFinalTotal)}</span>
                   </div>
                 )}
 
                 {appliedCoupon && (
                   <div className="flex justify-between text-sm text-green-400">
-                    <span>Mã giảm giá ({appliedCoupon})</span>
+                    <span>Mã giảm giá ({appliedCoupon}) {isExclusive ? '(Độc quyền)' : ''}</span>
                     <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}</span>
                   </div>
                 )}
@@ -299,7 +320,7 @@ function CheckoutContent() {
               <div className="flex justify-between items-center mb-6 border-t border-slate-800 pt-4">
                 <span className="text-slate-400">Tổng thanh toán</span>
                 <span className="text-2xl font-bold text-cyan-400">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(appliedCoupon ? cartTotal - discountAmount : cartFinalTotal)}
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalPriceToPay)}
                 </span>
               </div>
               <button
@@ -315,7 +336,8 @@ function CheckoutContent() {
                 ) : 'Tạo đơn & Lấy mã QR'}
               </button>
             </div>
-          )}
+            );
+          })}
 
           {step === 'qr' && (
             <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-5 text-center">
@@ -370,6 +392,13 @@ function CheckoutContent() {
                     </div>
                   </div>
                 </div>
+
+                {paymentInstructions && (
+                  <div 
+                    className="mt-6 text-left text-xs text-slate-300 border-t border-slate-800 pt-4 prose prose-invert max-w-none overflow-hidden"
+                    dangerouslySetInnerHTML={{ __html: paymentInstructions }}
+                  />
+                )}
 
                 <div className="mt-5 flex items-center justify-center gap-2 text-xs text-slate-500">
                   <span className="relative flex h-2.5 w-2.5">

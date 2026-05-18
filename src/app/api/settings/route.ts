@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await ensureSettingsSheet();
     const settings = await getSettings();
     return NextResponse.json(settings);
   } catch (error) {
