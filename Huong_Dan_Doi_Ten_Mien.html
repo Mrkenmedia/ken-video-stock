@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hướng Dẫn Đổi Tên Miền - KenVideo Platform</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #030712;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --border-color: rgba(31, 41, 55, 0.8);
+      --primary: #06b6d4;
+      --primary-hover: #22d3ee;
+      --secondary: #6366f1;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #f97316;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 30px;
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      border-radius: 3px;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 30%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      font-size: 1.05rem;
+    }
+
+    .badge {
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+
+    .alert-box {
+      background: rgba(249, 115, 22, 0.08);
+      border-left: 4px solid var(--accent);
+      padding: 20px;
+      border-radius: 8px 16px 16px 8px;
+      margin: 25px 0;
+    }
+
+    .alert-box h4 {
+      color: #fff;
+      font-weight: 700;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-container {
+      margin-top: 30px;
+      position: relative;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 25px;
+      margin-bottom: 25px;
+      transition: all 0.3s ease;
+    }
+
+    .step-card:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+    }
+
+    .step-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 15px;
+    }
+
+    .code-container {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      position: relative;
+      margin-top: 10px;
+      overflow-x: auto;
+    }
+
+    .code-line {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .copy-btn {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--text-main);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    ol, ul {
+      margin-left: 20px;
+      margin-bottom: 15px;
+      color: var(--text-muted);
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .highlight {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .print-button {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
+      color: #fff;
+      padding: 12px 28px;
+      font-weight: 700;
+      font-size: 1rem;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 20px -10px rgba(6, 182, 212, 0.5);
+      transition: all 0.3s;
+    }
+
+    .print-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 25px -10px rgba(6, 182, 212, 0.6);
+    }
+
+    /* Print styling rules */
+    @media print {
+      body {
+        background-color: #fff;
+        color: #000;
+        padding: 0;
+      }
+      .container {
+        box-shadow: none;
+        border: none;
+        background: #fff;
+        color: #000;
+        max-width: 100%;
+        padding: 0;
+      }
+      h1, h2, .step-title {
+        color: #000 !important;
+        background: none !important;
+        -webkit-text-fill-color: initial !important;
+      }
+      p, ol, ul, li {
+        color: #333 !important;
+      }
+      .step-card {
+        border: 1px solid #ddd;
+        background: #fdfdfd;
+        page-break-inside: avoid;
+      }
+      .code-container {
+        background: #f5f5f5;
+        border: 1px solid #ccc;
+        color: #000;
+      }
+      .print-button, .copy-btn {
+        display: none !important;
+      }
+      .alert-box {
+        border-left: 4px solid #f97316;
+        background: #fdf6e2;
+        color: #000;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div style="text-align: center;">
+    <button class="print-button" onclick="window.print()">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+      In tài liệu / Lưu file PDF hướng dẫn
+    </button>
+  </div>
+
+  <div class="container">
+    <header>
+      <span class="badge">KenVideo Stock Platform</span>
+      <h1>HƯỚNG DẪN CẤP NHẬT TÊN MIỀN MỚI</h1>
+      <p>Tài liệu kỹ thuật hướng dẫn chi tiết quy trình đổi tên miền hệ thống không gây gián đoạn dịch vụ</p>
+    </header>
+
+    <div class="alert-box">
+      <h4>
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="color: var(--accent);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        LƯU Ý QUAN TRỌNG:
+      </h4>
+      <p style="margin: 5px 0 0 0; color: #fff;">Toàn bộ liên kết và logic bên trong mã nguồn dự án được thiết kế dưới dạng <span class="highlight">Liên kết tương đối</span>. Do đó, bạn không cần phải thay đổi hoặc sửa đổi bất kỳ dòng code nào. Tất cả quy trình chuyển đổi đều nằm ở cấu hình bên ngoài của các nhà cung cấp dịch vụ!</p>
+    </div>
+
+    <div class="step-container">
+
+      <!-- STEP 1 -->
+      <div class="step-card">
+        <span class="step-num">1</span>
+        <div class="step-title">Thêm &amp; Cấu hình lại Tên miền trên Vercel</div>
+        <p>Đây là bước đầu tiên để hệ thống nhận diện và hướng khách hàng tới trang web của bạn dưới tên miền mới.</p>
+        <ol>
+          <li>Đăng nhập vào bảng điều khiển <strong>Vercel</strong> của dự án.</li>
+          <li>Tìm đến mục <strong>Settings</strong> (Cài đặt) -> Chọn tab <strong>Domains</strong> (Tên miền).</li>
+          <li>Nhập tên miền mới của bạn (ví dụ: <span class="highlight">mrkenmedia.vercel.app</span>) vào ô input và nhấn <strong>Add</strong>.</li>
+          <li>Bây giờ chuyển qua tab <strong>Environment Variables</strong> (Biến môi trường):
+            <ul>
+              <li>Tìm biến có tên <strong>`NEXTAUTH_URL`</strong>.</li>
+              <li>Nhấp chỉnh sửa và đổi giá trị thành đường dẫn tên miền mới của bạn.</li>
+            </ul>
+          </li>
+        </ol>
+        <div class="code-container">
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('https://mrkenmedia.vercel.app')">Copy</button>
+          <span class="code-line"><span style="color: var(--primary);">NEXTAUTH_URL</span>=https://mrkenmedia.vercel.app</span>
+        </div>
+        <p style="margin-top: 15px; font-size: 0.9rem; font-style: italic;">* Lưu ý: Sau khi đổi biến môi trường, hãy vào tab <strong>Deployments</strong> trên Vercel, chọn bản deploy mới nhất bấm nút 3 chấm và nhấn <strong>Redeploy</strong> để cập nhật có hiệu lực.</p>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step-card">
+        <span class="step-num">2</span>
+        <div class="step-title">Cấu hình Webhook trên Cổng thanh toán SePay</div>
+        <p>SePay cần biết địa chỉ chính xác để bắn tín hiệu xác nhận khách hàng chuyển khoản thành công về trang web của bạn.</p>
+        <ol>
+          <li>Đăng nhập vào bảng điều khiển tài khoản của bạn tại <strong>SePay.vn</strong>.</li>
+          <li>Tại menu bên trái, tìm đến mục <strong>Tích hợp Webhook</strong> (Webhook Integration).</li>
+          <li>Chọn chỉnh sửa cấu hình Webhook hiện có dành cho KenVideo, hoặc tạo mới.</li>
+          <li>Cập nhật mục <strong>Địa chỉ nhận Webhook (URL)</strong> thành liên kết API mới:</li>
+        </ol>
+        <div class="code-container">
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('https://mrkenmedia.vercel.app/api/webhooks/payment')">Copy</button>
+          <span class="code-line">https://mrkenmedia.vercel.app/api/webhooks/payment</span>
+        </div>
+        <p style="margin-top: 15px;">Các mục cấu hình khác giữ nguyên (Phương thức: <span class="highlight">POST</span>, Kiểu dữ liệu: <span class="highlight">JSON</span>, Secret Key: <span class="highlight">Trùng khớp với biến SEPAY_WEBHOOK_SECRET trên Vercel</span>).</p>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step-card">
+        <span class="step-num">3</span>
+        <div class="step-title">Đăng ký lại Tên miền trên Google Cloud Console</div>
+        <p>Để tính năng đăng nhập bằng tài khoản Google (OAuth 2.0) không bị lỗi bảo mật `redirect_uri_mismatch`, bạn buộc phải khai báo tên miền mới cho Google xác thực.</p>
+        <ol>
+          <li>Truy cập trang điều khiển <strong><a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: var(--primary); text-decoration: none;">Google Cloud Console Credentials</a></strong>.</li>
+          <li>Chọn đúng dự án Google APIs của ứng dụng của bạn.</li>
+          <li>Tại danh sách <strong>OAuth 2.0 Client IDs</strong>, chọn biểu tượng <strong>Chỉnh sửa (Edit Client)</strong> (hình bút chì).</li>
+          <li>Cập nhật hai phân mục sau bằng cách nhấp <strong>Thêm URI</strong> (Add URI):
+            <ul>
+              <li><strong>Authorized JavaScript origins (Nguồn JavaScript được ủy quyền):</strong></li>
+            </ul>
+          </li>
+        </ol>
+        <div class="code-container" style="margin-bottom: 15px;">
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('https://mrkenmedia.vercel.app')">Copy</button>
+          <span class="code-line">https://mrkenmedia.vercel.app</span>
+        </div>
+        <ul>
+          <li style="list-style-type: none; margin-left: 20px;">
+            <ul>
+              <li><strong>Authorized redirect URIs (URI chuyển hướng được ủy quyền):</strong></li>
+            </ul>
+          </li>
+        </ul>
+        <div class="code-container">
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('https://mrkenmedia.vercel.app/api/auth/callback/google')">Copy</button>
+          <span class="code-line">https://mrkenmedia.vercel.app/api/auth/callback/google</span>
+        </div>
+        <p style="margin-top: 15px; font-size: 0.9rem; font-style: italic;">* Lưu ý: Google có thể mất từ 2 đến 5 phút để phân phối cấu hình mới này trên máy chủ toàn cầu của họ.</p>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <p>© 2026 KenVideo Stock Platform. Tài liệu hướng dẫn kỹ thuật nội bộ.</p>
+      <p style="margin-top: 5px; font-size: 0.8rem; opacity: 0.6;">Để lưu file PDF, hãy nhấn nút ở đầu trang hoặc bấm tổ hợp phím Ctrl + P trên bàn phím -> Chọn Lưu dạng PDF.</p>
+    </div>
+  </div>
+
+</body>
+</html>
