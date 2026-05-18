@@ -2,10 +2,12 @@ import { google } from 'googleapis';
 import { Product, Order, Category, Coupon, Bundle, Settings, Banner } from '@/types';
 import { generateIdFromSku } from './utils';
 
-// Xử lý xuống dòng cho Private Key trên môi trường cloud
-const privateKey = process.env.GOOGLE_PRIVATE_KEY
-  ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
-  : '';
+// Xử lý xuống dòng cho Private Key trên môi trường cloud và loại bỏ dấu nháy kép bọc ngoài nếu có
+let rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
+if (rawKey.startsWith('"') && rawKey.endsWith('"')) {
+  rawKey = rawKey.substring(1, rawKey.length - 1);
+}
+const privateKey = rawKey.replace(/\\n/g, '\n');
 
 // Khởi tạo client xác thực bằng Service Account
 const auth = new google.auth.GoogleAuth({
