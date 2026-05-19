@@ -54,7 +54,7 @@ export async function GET(request: Request) {
       resHeaders['Accept-Ranges'] = driveRes.headers['accept-ranges'] as string;
     }
 
-    return new Response(webStream, {
+    return new Response(webStream as any, {
       status: driveRes.status || 200,
       headers: resHeaders,
     });
