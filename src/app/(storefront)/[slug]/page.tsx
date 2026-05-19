@@ -86,8 +86,14 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const demoId = extractDriveId(product.driveDemoId);
   const youtubeId = extractYouTubeId(product.driveDemoId);
   const driveThumbId = demoId || extractDriveId(product.driveGocMp4Id) || extractDriveId(product.driveGocMovId);
-  const thumbnail = product.thumbnailUrl
-    || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
+  const isGoogleThumb = product.thumbnailUrl && (
+    product.thumbnailUrl.includes('googleusercontent.com') || 
+    product.thumbnailUrl.includes('drive.google.com') || 
+    product.thumbnailUrl.includes('google.com')
+  );
+  const thumbnail = (product.thumbnailUrl && !isGoogleThumb)
+    ? product.thumbnailUrl
+    : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
     || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}` : '');
 
   return (
@@ -96,7 +102,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         {/* Video Player Column */}
         <div className="lg:col-span-2 space-y-8">
           <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl shadow-cyan-900/20 group">
-          {/* YouTube or Google Drive Preview Player */}
+          {/* Video Player — YouTube iframe OR Google Drive via proxy (no public share needed) */}
             {youtubeId ? (
               <iframe 
                 src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
@@ -106,12 +112,17 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 title={product.name}
               />
             ) : demoId ? (
-              <iframe 
-                src={`https://drive.google.com/file/d/${demoId}/preview`} 
-                className="w-full h-full border-0" 
-                allow="autoplay"
-                title={product.name}
-              />
+              <video
+                src={`/api/drive-proxy?id=${demoId}`}
+                className="w-full h-full object-contain"
+                controls
+                controlsList="nodownload"
+                poster={thumbnail}
+                preload="metadata"
+                playsInline
+              >
+                Trình duyệt của bạn không hỗ trợ thẻ video.
+              </video>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-slate-500">
                 <p>Video demo chưa có sẵn</p>

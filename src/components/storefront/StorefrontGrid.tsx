@@ -322,8 +322,8 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {displayedProducts.map((product) => (
-                <VideoCard key={product.sku} product={product} />
+              {displayedProducts.map((product, index) => (
+                <VideoCard key={`${product.sku}-${index}`} product={product} />
               ))}
             </div>
             

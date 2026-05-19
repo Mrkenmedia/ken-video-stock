@@ -38,9 +38,11 @@ interface VideoCardProps {
 export default function VideoCard({ product }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const srcLoadedRef = useRef(false); // Track if src has been set (lazy load)
   const scrubTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
@@ -77,40 +79,56 @@ export default function VideoCard({ product }: VideoCardProps) {
   const mp4Id  = extractDriveId(product.driveGocMp4Id);
   const movId  = extractDriveId(product.driveGocMovId);
 
-  // Ưu tiên thumbnailUrl từ Sheets, fallback về Drive Demo, sau đó về File Gốc MP4/MOV
+  // Ưu tiên thumbnailUrl từ Sheets (nếu là link ngoài công khai), fallback về Drive Demo proxy, sau đó về File Gốc MP4/MOV proxy
   const driveThumbId = (!youtubeId && demoId) ? demoId : (mp4Id || movId);
-  // YouTube thumbnail: dùng hq720 thumbnail thay vì Drive proxy
-  const bgImage = product.thumbnailUrl
-    || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
+  
+  // Phát hiện xem thumbnail từ Sheets có phải là link Google Drive/Usercontent riêng tư hay không
+  const isGoogleThumb = product.thumbnailUrl && (
+    product.thumbnailUrl.includes('googleusercontent.com') || 
+    product.thumbnailUrl.includes('drive.google.com') || 
+    product.thumbnailUrl.includes('google.com')
+  );
+
+  // YouTube thumbnail: dùng hqdefault thumbnail, Google Drive dùng proxy bảo mật không cần login, link ngoài dùng trực tiếp
+  const bgImage = (product.thumbnailUrl && !isGoogleThumb)
+    ? product.thumbnailUrl
+    : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
     || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}` : '/placeholder-video.jpg');
 
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
   const safeSlug = slugify(product.slug || product.sku);
 
-  // Play video on hover (only for Google Drive videos, not YouTube)
-  useEffect(() => {
-    if (youtubeId) return; // YouTube videos can't be auto-played via <video> tag
-    if (!videoRef.current) return;
-    if (isHovered && demoId) {
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Ignore play interruption errors
-        });
-      }
-    } else {
-      videoRef.current.pause();
+  // ── Shutterstock-style lazy src swap ──────────────────────────────────────
+  // Video element has NO src initially (preload="none").
+  // On mouseenter: set src once → play() (browser auto-loads). Zero bandwidth until hover.
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (youtubeId || !demoId || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    // First hover: inject src lazily
+    if (!srcLoadedRef.current) {
+      video.src = `/api/drive-proxy?id=${demoId}`;
+      video.load(); // Required for preload="none" in some browsers
+      srcLoadedRef.current = true;
+      setIsBuffering(true);
     }
-  }, [isHovered, demoId, youtubeId]);
 
+    // play() triggers auto-load, returns Promise
+    video.play().catch(err => {
+      console.warn("Video play failed:", err);
+    });
+  };
 
-
-  const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => {
     setIsHovered(false);
+    setIsPlaying(false);
+    setIsBuffering(false);
     setProgress(0);
     setIsScrubbing(false);
     if (scrubTimeoutRef.current) clearTimeout(scrubTimeoutRef.current);
+    videoRef.current?.pause();
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -145,6 +163,15 @@ export default function VideoCard({ product }: VideoCardProps) {
     if (videoRef.current && videoRef.current.duration) {
       setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
     }
+  };
+
+  const handleVideoPlaying = () => {
+    setIsPlaying(true);
+    setIsBuffering(false);
+  };
+
+  const handleVideoWaiting = () => {
+    setIsBuffering(true);
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -196,23 +223,32 @@ export default function VideoCard({ product }: VideoCardProps) {
         src={bgImage} 
         alt={product.name}
         loading="lazy"
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isPlaying ? 'opacity-0' : 'opacity-100'}`}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
       />
 
-      {/* Video Preview — only for Google Drive (YouTube can't auto-play via <video>) */}
+      {/* Video Preview — Lazy src swap (Shutterstock pattern):
+           No src set until first hover → zero bandwidth on page load.
+           src is injected imperatively in handleMouseEnter.           */}
       {demoId && !youtubeId && (
         <video
           ref={videoRef}
-          src={`/api/drive-proxy?id=${demoId}`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isPlaying ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
           muted
           loop
           playsInline
           preload="none"
-          onPlaying={() => setIsPlaying(true)}
+          onPlaying={handleVideoPlaying}
+          onWaiting={handleVideoWaiting}
           onPause={() => setIsPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
         />
+      )}
+
+      {/* Buffering spinner — hiển thị khi đang tải video lần đầu */}
+      {isHovered && isBuffering && demoId && !youtubeId && (
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="w-10 h-10 rounded-full border-2 border-slate-600 border-t-cyan-400 animate-spin" />
+        </div>
       )}
 
       {/* YouTube hover overlay - show play icon when YouTube video */}
@@ -357,11 +393,12 @@ export default function VideoCard({ product }: VideoCardProps) {
                ) : (
                  <video
                    src={`/api/drive-proxy?id=${demoId}`}
+                   className="w-full h-full object-contain"
                    controls
                    autoPlay
-                   loop
-                   className="w-full h-full object-contain"
                    controlsList="nodownload"
+                   preload="metadata"
+                   playsInline
                  />
                )}
             </div>

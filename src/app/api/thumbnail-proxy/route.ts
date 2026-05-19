@@ -17,8 +17,22 @@ export async function GET(request: Request) {
     });
 
     if (meta.data.thumbnailLink) {
-      // Return a redirect to the public thumbnail URL
-      return Response.redirect(meta.data.thumbnailLink, 302);
+      // Fetch the thumbnail image from our server to bypass Google login restrictions
+      const thumbRes = await fetch(meta.data.thumbnailLink);
+      if (!thumbRes.ok) {
+        return new Response('Failed to fetch thumbnail from Google', { status: thumbRes.status });
+      }
+      
+      const arrayBuffer = await thumbRes.arrayBuffer();
+      const contentType = thumbRes.headers.get('content-type') || 'image/jpeg';
+      
+      return new Response(arrayBuffer, {
+        headers: {
+          'Content-Type': contentType,
+          // Cache the thumbnail publicly for 1 year
+          'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400',
+        }
+      });
     } else {
       return new Response('No thumbnail found', { status: 404 });
     }
