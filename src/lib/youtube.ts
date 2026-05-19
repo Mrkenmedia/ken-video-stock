@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
 
-let youtubeClient: ReturnType<OAuth2Client['refreshAccessToken']>['youtube'] | null = null;
+let youtubeClient: any | null = null;
 
 export async function getYouTubeService() {
   if (youtubeClient) return youtubeClient;
