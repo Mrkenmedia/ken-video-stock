@@ -12,10 +12,11 @@ export default async function StorefrontHome() {
     getBanners()
   ]);
   const activeProducts = products.filter(p => p.status === 'active');
+  const activeBanners = banners.filter(b => b.status !== 'inactive');
 
   return (
     <div>
-      <StorefrontGrid products={activeProducts} tags={tags} banners={banners} />
+      <StorefrontGrid products={activeProducts} tags={tags} banners={activeBanners} />
     </div>
   );
 }

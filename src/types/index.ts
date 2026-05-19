@@ -74,4 +74,5 @@ export interface Banner {
   mediaUrl: string;
   linkUrl?: string;
   order: number;
+  status?: 'active' | 'inactive';
 }

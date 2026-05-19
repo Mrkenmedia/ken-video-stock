@@ -18,6 +18,7 @@ export default function AdminBanners() {
   const [mediaUrl, setMediaUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [order, setOrder] = useState('0');
+  const [status, setStatus] = useState<'active' | 'inactive'>('active');
 
   useEffect(() => {
     fetchBanners();
@@ -48,6 +49,7 @@ export default function AdminBanners() {
     setMediaUrl('');
     setLinkUrl('');
     setOrder((banners.length * 10).toString());
+    setStatus('active');
     setIsModalOpen(true);
   };
 
@@ -59,7 +61,30 @@ export default function AdminBanners() {
     setMediaUrl(banner.mediaUrl);
     setLinkUrl(banner.linkUrl || '');
     setOrder(banner.order.toString());
+    setStatus(banner.status || 'active');
     setIsModalOpen(true);
+  };
+
+  const toggleStatus = async (banner: Banner) => {
+    const newStatus = banner.status === 'inactive' ? 'active' : 'inactive';
+    try {
+      const res = await fetch('/api/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: banner.id,
+          status: newStatus,
+        }),
+      });
+
+      if (res.ok) {
+        fetchBanners();
+      } else {
+        alert('Không thể thay đổi trạng thái banner');
+      }
+    } catch (err) {
+      alert('Lỗi kết nối máy chủ');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,6 +101,7 @@ export default function AdminBanners() {
       mediaUrl,
       linkUrl,
       order: parseInt(order) || 0,
+      status,
     };
 
     try {
@@ -184,13 +210,24 @@ export default function AdminBanners() {
                   />
                 )}
                 
-                {/* MediaType Badge */}
-                <span className={`absolute top-3 left-3 px-2.5 py-1 text-xs font-bold rounded-lg uppercase tracking-wide shadow-md ${banner.mediaType === 'video' ? 'bg-cyan-500 text-white' : 'bg-amber-500 text-white'}`}>
-                  {banner.mediaType === 'video' ? 'Video' : 'Ảnh'}
-                </span>
+                {/* Badges Container */}
+                <div className="absolute top-3 left-3 flex gap-2 z-10">
+                  <span className={`px-2.5 py-1 text-xs font-bold rounded-lg uppercase tracking-wide shadow-md ${banner.mediaType === 'video' ? 'bg-cyan-500 text-white' : 'bg-amber-500 text-white'}`}>
+                    {banner.mediaType === 'video' ? 'Video' : 'Ảnh'}
+                  </span>
+                  
+                  <button
+                    onClick={() => toggleStatus(banner)}
+                    title="Click để thay đổi trạng thái hiển thị"
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg uppercase tracking-wide shadow-md transition-all flex items-center gap-1.5 ${banner.status === 'inactive' ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${banner.status === 'inactive' ? 'bg-slate-300' : 'bg-emerald-200 animate-pulse'}`}></span>
+                    {banner.status === 'inactive' ? 'Đang Ẩn' : 'Hiển Thị'}
+                  </button>
+                </div>
                 
                 {/* Order Badge */}
-                <span className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur text-white px-2 py-1 text-xs font-bold rounded-md border border-slate-700">
+                <span className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur text-white px-2 py-1 text-xs font-bold rounded-md border border-slate-700 z-10">
                   Thứ tự: {banner.order}
                 </span>
               </div>
@@ -323,6 +360,26 @@ export default function AdminBanners() {
                     onChange={(e) => setOrder(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white text-slate-900 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 placeholder-slate-400 font-medium"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Trạng thái hiển thị</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStatus('active')}
+                    className={`py-2 rounded-xl text-sm font-bold border transition-all ${status === 'active' ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-600/25' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    Hiển Thị (Active)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatus('inactive')}
+                    className={`py-2 rounded-xl text-sm font-bold border transition-all ${status === 'inactive' ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/25' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    Ẩn Banner (Inactive)
+                  </button>
                 </div>
               </div>
 

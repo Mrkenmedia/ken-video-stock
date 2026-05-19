@@ -807,13 +807,13 @@ export async function ensureBannersSheet(): Promise<void> {
           ],
         },
       });
-      // Add default headers: ID, Title, Subtitle, MediaType, MediaUrl, LinkUrl, Order
+      // Add default headers: ID, Title, Subtitle, MediaType, MediaUrl, LinkUrl, Order, Status
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Banners!A1:G1',
+        range: 'Banners!A1:H1',
         valueInputOption: 'USER_ENTERED',
         requestBody: { 
-          values: [['ID', 'Title', 'Subtitle', 'MediaType', 'MediaUrl', 'LinkUrl', 'Order']] 
+          values: [['ID', 'Title', 'Subtitle', 'MediaType', 'MediaUrl', 'LinkUrl', 'Order', 'Status']] 
         },
       });
     }
@@ -827,7 +827,7 @@ export async function getBanners(): Promise<Banner[]> {
     // NOTE: ensureBannersSheet() must NOT be called here — it fires an extra
     // uncached sheets.spreadsheets.get() on EVERY storefront render and is the
     // primary cause of "Quota exceeded" errors. Call it only from admin routes.
-    const response = await cachedSpreadsheetGet('Banners!A2:G');
+    const response = await cachedSpreadsheetGet('Banners!A2:H');
     const rows = response.data.values;
     if (!rows || rows.length === 0) return [];
     
@@ -840,6 +840,7 @@ export async function getBanners(): Promise<Banner[]> {
         mediaUrl: row[4] || '',
         linkUrl: row[5] || '',
         order: parseInt(row[6]) || 0,
+        status: (row[7] as 'active' | 'inactive') || 'active',
       }))
       .filter((b: Banner) => b.id)
       .sort((a: any, b: any) => a.order - b.order);
@@ -855,7 +856,7 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<boolean> {
     const id = 'b_' + Math.random().toString(36).substring(2, 11);
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Banners!A:G',
+      range: 'Banners!A:H',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [[
@@ -866,10 +867,11 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<boolean> {
           banner.mediaUrl,
           banner.linkUrl || '',
           banner.order,
+          banner.status || 'active',
         ]],
       },
     });
-    delete promiseCache['Banners!A2:G'];
+    delete promiseCache['Banners!A2:H'];
     return true;
   } catch (error) {
     console.error('Error adding banner:', error);
@@ -889,7 +891,7 @@ export async function updateBanner(id: string, banner: Partial<Banner>): Promise
     // Fetch the current row first to merge values
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Banners!A${rowIndex}:G${rowIndex}`,
+      range: `Banners!A${rowIndex}:H${rowIndex}`,
     });
     const row = response.data.values?.[0] || [];
     
@@ -901,15 +903,16 @@ export async function updateBanner(id: string, banner: Partial<Banner>): Promise
       banner.mediaUrl !== undefined ? banner.mediaUrl : (row[4] || ''),
       banner.linkUrl !== undefined ? banner.linkUrl : (row[5] || ''),
       banner.order !== undefined ? banner.order : (row[6] || 0),
+      banner.status !== undefined ? banner.status : (row[7] || 'active'),
     ];
     
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Banners!A${rowIndex}:G${rowIndex}`,
+      range: `Banners!A${rowIndex}:H${rowIndex}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [updatedRow] },
     });
-    delete promiseCache['Banners!A2:G'];
+    delete promiseCache['Banners!A2:H'];
     return true;
   } catch (error) {
     console.error('Error updating banner:', error);
@@ -951,7 +954,7 @@ export async function deleteBanner(id: string): Promise<boolean> {
         ],
       },
     });
-    delete promiseCache['Banners!A2:G'];
+    delete promiseCache['Banners!A2:H'];
     return true;
   } catch (error) {
     console.error('Error deleting banner:', error);
