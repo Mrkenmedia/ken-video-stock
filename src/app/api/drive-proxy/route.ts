@@ -3,6 +3,14 @@ import { Readable } from 'stream';
 
 export const dynamic = 'force-dynamic';
 
+function getHeader(headersObj: any, name: string): string | undefined {
+  if (!headersObj) return undefined;
+  if (typeof headersObj.get === 'function') {
+    return headersObj.get(name) || undefined;
+  }
+  return headersObj[name] || headersObj[name.toLowerCase()] || undefined;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,21 +45,23 @@ export async function GET(request: Request) {
     const webStream = Readable.toWeb(nodeStream);
 
     // Copy essential streaming headers from Google Drive's response
+    const contentType = getHeader(driveRes.headers, 'content-type') || 'video/mp4';
+    const contentRange = getHeader(driveRes.headers, 'content-range');
+    const contentLength = getHeader(driveRes.headers, 'content-length');
+    const acceptRanges = getHeader(driveRes.headers, 'accept-ranges') || 'bytes';
+
     const resHeaders: Record<string, string> = {
-      'Content-Type': (driveRes.headers['content-type'] as string) || 'video/mp4',
-      'Accept-Ranges': 'bytes',
+      'Content-Type': contentType,
+      'Accept-Ranges': acceptRanges,
       // Disable caching for media streams so Range requests (206 Partial Content) work correctly in browsers
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     };
 
-    if (driveRes.headers['content-range']) {
-      resHeaders['Content-Range'] = driveRes.headers['content-range'] as string;
+    if (contentRange) {
+      resHeaders['Content-Range'] = contentRange;
     }
-    if (driveRes.headers['content-length']) {
-      resHeaders['Content-Length'] = driveRes.headers['content-length'] as string;
-    }
-    if (driveRes.headers['accept-ranges']) {
-      resHeaders['Accept-Ranges'] = driveRes.headers['accept-ranges'] as string;
+    if (contentLength) {
+      resHeaders['Content-Length'] = contentLength;
     }
 
     return new Response(webStream as any, {
