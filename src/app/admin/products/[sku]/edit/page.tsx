@@ -106,7 +106,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ sk
             </div>
           </div>
 
-          </div>
+
 
           {/* Section 2: Media & ID Google Drive */}
           <div>
