@@ -1,6 +1,7 @@
 "use server";
 
 import { addProduct } from '@/lib/google';
+import { uploadToDrive, uploadToYouTube } from '@/lib/upload';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -10,15 +11,52 @@ export async function submitNewProduct(formData: FormData) {
     ? tagsData[0].split(',').map(t => t.trim()).filter(Boolean)
     : tagsData.filter(Boolean);
 
+  let driveGocMp4Id = formData.get('driveGocMp4Id') as string || '';
+  let driveGocMovId = formData.get('driveGocMovId') as string || '';
+  let driveDemoId = formData.get('driveDemoId') as string || '';
+
+  const videoFile = formData.get('videoFile') as File | null;
+  const demoFile = formData.get('demoFile') as File | null;
+  const uploadToYT = formData.get('uploadToYouTube') === 'on' || formData.get('uploadToYouTube') === 'true';
+
+  const MP4_FOLDER_ID = process.env.DRIVE_MP4_FOLDER_ID || process.env.GOOGLE_DRIVE_FOLDER_ID || '';
+  const MOV_FOLDER_ID = process.env.DRIVE_MOV_FOLDER_ID || process.env.GOOGLE_DRIVE_FOLDER_ID || '';
+
+  if (videoFile && videoFile.size > 0) {
+    const isMp4 = videoFile.name.toLowerCase().endsWith('.mp4');
+    const folder = isMp4 ? MP4_FOLDER_ID : MOV_FOLDER_ID;
+    const id = await uploadToDrive(videoFile, folder);
+    if (isMp4) driveGocMp4Id = id;
+    else driveGocMovId = id;
+  }
+
+  if (demoFile && demoFile.size > 0) {
+    const isMp4 = demoFile.name.toLowerCase().endsWith('.mp4');
+    const folder = isMp4 ? MP4_FOLDER_ID : MOV_FOLDER_ID;
+    const driveId = await uploadToDrive(demoFile, folder);
+    driveDemoId = driveId;
+
+    if (uploadToYT) {
+      try {
+        const ytId = await uploadToYouTube(demoFile, formData.get('name') as string, formData.get('description') as string);
+        if (ytId) {
+          driveDemoId = `https://youtu.be/${ytId}`;
+        }
+      } catch (e) {
+        console.error('Failed to upload demo to YouTube', e);
+      }
+    }
+  }
+
   const productData = {
     sku: formData.get('sku') as string,
     name: formData.get('name') as string,
     tags: tags,
     thumbnailUrl: formData.get('thumbnailUrl') as string,
-    driveDemoId: formData.get('driveDemoId') as string,
-    driveGocMp4Id: formData.get('driveGocMp4Id') as string,
+    driveDemoId,
+    driveGocMp4Id,
     priceMp4: parseFloat(formData.get('priceMp4') as string) || 0,
-    driveGocMovId: (formData.get('driveGocMovId') as string) || '',
+    driveGocMovId,
     priceMov: parseFloat(formData.get('priceMov') as string) || 0,
     licenseType: (formData.get('licenseType') as string) || 'Standard',
     status: (formData.get('status') as 'active' | 'inactive') || 'active',
@@ -49,16 +87,53 @@ export async function editProduct(formData: FormData) {
     ? tagsData[0].split(',').map(t => t.trim()).filter(Boolean)
     : tagsData.filter(Boolean);
 
+  let driveGocMp4Id = formData.get('driveGocMp4Id') as string || '';
+  let driveGocMovId = formData.get('driveGocMovId') as string || '';
+  let driveDemoId = formData.get('driveDemoId') as string || '';
+
+  const videoFile = formData.get('videoFile') as File | null;
+  const demoFile = formData.get('demoFile') as File | null;
+  const uploadToYT = formData.get('uploadToYouTube') === 'on' || formData.get('uploadToYouTube') === 'true';
+
+  const MP4_FOLDER_ID = process.env.DRIVE_MP4_FOLDER_ID || process.env.GOOGLE_DRIVE_FOLDER_ID || '';
+  const MOV_FOLDER_ID = process.env.DRIVE_MOV_FOLDER_ID || process.env.GOOGLE_DRIVE_FOLDER_ID || '';
+
+  if (videoFile && videoFile.size > 0) {
+    const isMp4 = videoFile.name.toLowerCase().endsWith('.mp4');
+    const folder = isMp4 ? MP4_FOLDER_ID : MOV_FOLDER_ID;
+    const id = await uploadToDrive(videoFile, folder);
+    if (isMp4) driveGocMp4Id = id;
+    else driveGocMovId = id;
+  }
+
+  if (demoFile && demoFile.size > 0) {
+    const isMp4 = demoFile.name.toLowerCase().endsWith('.mp4');
+    const folder = isMp4 ? MP4_FOLDER_ID : MOV_FOLDER_ID;
+    const driveId = await uploadToDrive(demoFile, folder);
+    driveDemoId = driveId;
+
+    if (uploadToYT) {
+      try {
+        const ytId = await uploadToYouTube(demoFile, formData.get('name') as string, formData.get('description') as string);
+        if (ytId) {
+          driveDemoId = `https://youtu.be/${ytId}`;
+        }
+      } catch (e) {
+        console.error('Failed to upload demo to YouTube', e);
+      }
+    }
+  }
+
   const { updateProduct } = await import('@/lib/google');
   
   const productData = {
     name: formData.get('name') as string,
     tags: tags,
     thumbnailUrl: formData.get('thumbnailUrl') as string,
-    driveDemoId: formData.get('driveDemoId') as string,
-    driveGocMp4Id: formData.get('driveGocMp4Id') as string,
+    driveDemoId,
+    driveGocMp4Id,
     priceMp4: parseFloat(formData.get('priceMp4') as string) || 0,
-    driveGocMovId: (formData.get('driveGocMovId') as string) || '',
+    driveGocMovId,
     priceMov: parseFloat(formData.get('priceMov') as string) || 0,
     licenseType: (formData.get('licenseType') as string) || 'Standard',
     status: (formData.get('status') as 'active' | 'inactive') || 'active',

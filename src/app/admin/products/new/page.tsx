@@ -102,9 +102,33 @@ export default async function NewProductPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">URL Ảnh Thumbnail (Tùy chọn - Bỏ trống để tự động lấy ảnh từ video Google Drive)</label>
                 <input type="url" name="thumbnailUrl" placeholder="https://..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
               </div>
+              
+              <div className="bg-teal-50/50 p-4 rounded-xl border border-teal-100 space-y-4">
+                <h4 className="font-semibold text-teal-800">Tự động Tải lên (Tùy chọn)</h4>
+                <p className="text-sm text-teal-600 mb-2">Chọn file để tự động tải lên Google Drive và YouTube. Hệ thống sẽ tự động điền các ID bên dưới.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">File Video Gốc (MP4/MOV)</label>
+                    <input type="file" name="videoFile" accept=".mp4,.mov" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">File Video Demo (MP4)</label>
+                    <input type="file" name="demoFile" accept=".mp4" className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
+                    
+                    <div className="mt-3 flex items-center">
+                      <input type="checkbox" id="uploadToYouTube" name="uploadToYouTube" className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded" />
+                      <label htmlFor="uploadToYouTube" className="ml-2 block text-sm text-gray-900">
+                        Đồng thời đăng Video Demo lên YouTube
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Video Demo - Google Drive ID hoặc YouTube URL (Bắt buộc) *</label>
-                <input required type="text" name="driveDemoId" placeholder="Drive ID: 1Bxy...  |  YouTube: https://youtu.be/..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Video Demo - Google Drive ID hoặc YouTube URL (Bắt buộc nếu không tải file lên)</label>
+                <input type="text" name="driveDemoId" placeholder="Drive ID: 1Bxy...  |  YouTube: https://youtu.be/..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
                 <p className="mt-1.5 text-xs text-gray-400">Hỗ trợ: Google Drive ID, link Drive đầy đủ, link YouTube (watch/youtu.be/shorts)</p>
               </div>
             </div>
@@ -123,7 +147,7 @@ export default async function NewProductPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Drive ID - File Gốc MP4</label>
-                  <input type="text" name="driveGocMp4Id" placeholder="Bỏ trống nếu không bán MP4" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                  <input type="text" name="driveGocMp4Id" placeholder="Bỏ trống nếu đã chọn tải file lên" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
                 </div>
               </div>
 
@@ -136,7 +160,7 @@ export default async function NewProductPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Drive ID - File Gốc MOV</label>
-                  <input type="text" name="driveGocMovId" placeholder="Bỏ trống nếu không bán MOV" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                  <input type="text" name="driveGocMovId" placeholder="Bỏ trống nếu đã chọn tải file lên" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
                 </div>
               </div>
             </div>
