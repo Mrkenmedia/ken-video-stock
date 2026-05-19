@@ -105,7 +105,7 @@ export default async function NewProductPage() {
               
               <div className="bg-teal-50/50 p-4 rounded-xl border border-teal-100 space-y-4">
                 <h4 className="font-semibold text-teal-800">Tự động Tải lên (Tùy chọn)</h4>
-                <p className="text-sm text-teal-600 mb-2">Chọn file để tự động tải lên Google Drive và YouTube. Hệ thống sẽ tự động điền các ID bên dưới.</p>
+                <p className="text-xs text-teal-600 mt-1">Lưu ý: Nếu bạn tải file video nặng (vd: 50MB-100MB+), web app sẽ xử lý trơn tru nếu bạn chạy mã nguồn cục bộ (local) hoặc dùng máy chủ ảo (VPS). Tuy nhiên nếu host trên Vercel (bản miễn phí), quá trình tải file lớn qua Server Action có thể bị giới hạn dung lượng ở mức 4.5MB.</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
