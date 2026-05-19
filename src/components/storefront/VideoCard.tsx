@@ -37,7 +37,7 @@ interface VideoCardProps {
 
 export default function VideoCard({ product }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -103,32 +103,49 @@ export default function VideoCard({ product }: VideoCardProps) {
   // On mouseenter: set src once → play() (browser auto-loads). Zero bandwidth until hover.
   const handleMouseEnter = () => {
     setIsHovered(true);
-    if (youtubeId || !demoId || !videoRef.current) return;
-
-    const video = videoRef.current;
-
-    // First hover: inject src lazily
-    if (!srcLoadedRef.current) {
-      video.src = `/api/drive-proxy?id=${demoId}`;
-      video.load(); // Required for preload="none" in some browsers
-      srcLoadedRef.current = true;
-      setIsBuffering(true);
-    }
-
-    // play() triggers auto-load, returns Promise
-    video.play().catch(err => {
-      console.warn("Video play failed:", err);
-    });
   };
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    setIsPlaying(false);
+    setIsPreviewPlaying(false);
     setIsBuffering(false);
     setProgress(0);
     setIsScrubbing(false);
     if (scrubTimeoutRef.current) clearTimeout(scrubTimeoutRef.current);
     videoRef.current?.pause();
+  };
+
+  const togglePlayPreview = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isPreviewPlaying) {
+      setIsPreviewPlaying(false);
+      videoRef.current?.pause();
+      return;
+    }
+    
+    setIsPreviewPlaying(true);
+    
+    if (youtubeId) {
+       setIsBuffering(true);
+       setTimeout(() => setIsBuffering(false), 1000); // Tạm ẩn buffering sau 1s cho iframe
+       return;
+    }
+
+    if (!demoId || !videoRef.current) return;
+
+    const video = videoRef.current;
+    if (!srcLoadedRef.current) {
+      video.src = `/api/drive-proxy?id=${demoId}`;
+      video.load();
+      srcLoadedRef.current = true;
+      setIsBuffering(true);
+    }
+
+    video.play().catch(err => {
+      console.warn("Video play failed:", err);
+    });
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -166,7 +183,6 @@ export default function VideoCard({ product }: VideoCardProps) {
   };
 
   const handleVideoPlaying = () => {
-    setIsPlaying(true);
     setIsBuffering(false);
   };
 
@@ -210,12 +226,12 @@ export default function VideoCard({ product }: VideoCardProps) {
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
     >
-      {/* Clickable Card Background to trigger Preview Modal */}
+      {/* Clickable Card Background to trigger Preview Play */}
       <button 
-        onClick={(e) => { e.preventDefault(); setShowPreviewModal(true); }}
-        className="absolute inset-0 z-10 w-full h-full text-left cursor-pointer"
+        onClick={togglePlayPreview}
+        className="absolute inset-0 z-10 w-full h-full text-left cursor-pointer focus:outline-none"
       >
-        <span className="sr-only">Xem trước {product.name}</span>
+        <span className="sr-only">Phát video {product.name}</span>
       </button>
 
       {/* Static Thumbnail with Lazy Loading */}
@@ -226,37 +242,48 @@ export default function VideoCard({ product }: VideoCardProps) {
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
       />
 
-      {/* Video Preview — Lazy src swap (Shutterstock pattern):
-           No src set until first hover → zero bandwidth on page load.
-           src is injected imperatively in handleMouseEnter.           */}
+      {/* Video Preview (Google Drive) */}
       {demoId && !youtubeId && (
         <video
           ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isPreviewPlaying ? 'opacity-100' : 'opacity-0'}`}
           muted
           loop
           playsInline
           preload="none"
           onPlaying={handleVideoPlaying}
           onWaiting={handleVideoWaiting}
-          onPause={() => setIsPlaying(false)}
+          onPause={() => setIsPreviewPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
         />
       )}
 
-      {/* Buffering spinner — hiển thị khi đang tải video lần đầu */}
-      {isHovered && isBuffering && demoId && !youtubeId && (
+      {/* YouTube Preview */}
+      {youtubeId && isPreviewPlaying && (
+        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0 bg-black">
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&loop=1&playlist=${youtubeId}`}
+            className="absolute top-1/2 left-1/2 w-[150%] h-[150%] -translate-x-1/2 -translate-y-1/2"
+            style={{ border: 0 }}
+            allow="autoplay; encrypted-media"
+            title={product.name}
+          />
+        </div>
+      )}
+
+      {/* Buffering spinner */}
+      {isPreviewPlaying && isBuffering && demoId && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="w-10 h-10 rounded-full border-2 border-slate-600 border-t-cyan-400 animate-spin" />
         </div>
       )}
 
-      {/* YouTube hover overlay - show play icon when YouTube video */}
-      {youtubeId && isHovered && (
-        <div className="absolute inset-0 flex items-center justify-center z-15 pointer-events-none">
-          <div className="w-16 h-16 rounded-full bg-red-600/90 flex items-center justify-center shadow-2xl">
-            <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          </div>
+      {/* Play Icon when not playing */}
+      {!isPreviewPlaying && (
+        <div className={`absolute inset-0 flex items-center justify-center z-15 pointer-events-none transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-80'}`}>
+           <div className="w-14 h-14 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-2xl">
+              <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+           </div>
         </div>
       )}
       
@@ -268,18 +295,25 @@ export default function VideoCard({ product }: VideoCardProps) {
 
       {/* --- CORNER OVERLAYS (SHUTTERSTOCK STYLE) --- */}
       
-      {/* Top Left: Format & Resolution */}
-      <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 text-white pointer-events-none">
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <span className="text-xs font-bold tracking-wide drop-shadow-md">
-          {product.resolution || '4K'} {product.duration ? `• ${product.duration}` : ''}
-        </span>
-        {product.priceMp4 > 0 && <span className="ml-1 text-[10px] font-mono bg-white/20 px-1 rounded">MP4</span>}
-        {discountBadgePct > 0 && (
-          <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black uppercase text-white bg-red-500 rounded animate-pulse">
-            -{discountBadgePct}%
+      {/* Top Left: Title & Resolution */}
+      <div className="absolute top-2 left-2 right-12 z-20 flex flex-col items-start gap-1 text-white pointer-events-none">
+        {/* Title (Always visible or prominent) */}
+        <h3 className="text-sm font-bold tracking-wide drop-shadow-md line-clamp-2 leading-tight">
+          {product.name}
+        </h3>
+        
+        {/* Resolution & Format (Visible on Hover) */}
+        <div className={`flex items-center gap-1.5 transition-all duration-300 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
+          <span className="text-[10px] font-bold tracking-wide bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded drop-shadow-md border border-white/10">
+            {product.resolution || '4K'} {product.duration ? `• ${product.duration}` : ''}
           </span>
-        )}
+          {product.priceMp4 > 0 && <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded shadow-sm">MP4</span>}
+          {discountBadgePct > 0 && (
+            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase text-white bg-red-500 rounded animate-pulse shadow-sm">
+              -{discountBadgePct}%
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Top Right: Save (Heart) */}
@@ -291,24 +325,18 @@ export default function VideoCard({ product }: VideoCardProps) {
         <span className="text-xs font-medium hidden sm:inline-block">Lưu</span>
       </button>
 
-      {/* Center: Title (Visible on Hover) */}
-      <div className={`absolute bottom-12 left-3 right-3 z-20 pointer-events-none transition-all duration-300 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}`}>
-        <h3 className="text-white text-sm font-semibold line-clamp-2 drop-shadow-lg leading-tight">
-          {product.name}
-        </h3>
-      </div>
-
-      {/* Bottom Left: Chi Tiết */}
+      {/* Bottom Left: Chi Tiết (Mở Popup) */}
       <div className="absolute bottom-2 left-2 z-30 pointer-events-auto">
-        <Link 
-          href={`/${safeSlug}`}
+        <button 
+          onClick={(e) => { e.preventDefault(); setShowPreviewModal(true); }}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
           <span className="text-xs font-medium">Chi tiết</span>
-        </Link>
+        </button>
       </div>
 
       {/* Bottom Right: Price & Cart */}
