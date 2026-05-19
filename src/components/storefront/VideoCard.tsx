@@ -39,12 +39,27 @@ export default function VideoCard({ product }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [isScrubbing, setIsScrubbing] = useState(false);
   const srcLoadedRef = useRef(false); // Track if src has been set (lazy load)
-  const scrubTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Lắng nghe sự kiện để dừng video này nếu một video khác bắt đầu phát
+  useEffect(() => {
+    const handleGlobalPlay = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail !== product.sku) {
+        setIsPreviewPlaying(false);
+        if (videoRef.current) {
+          videoRef.current.pause();
+        }
+      }
+    };
+    window.addEventListener('storefront_play_preview', handleGlobalPlay);
+    return () => {
+      window.removeEventListener('storefront_play_preview', handleGlobalPlay);
+    };
+  }, [product.sku]);
   
   const { addToCart, setIsCartOpen } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -107,12 +122,7 @@ export default function VideoCard({ product }: VideoCardProps) {
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    setIsPreviewPlaying(false);
-    setIsBuffering(false);
-    setProgress(0);
-    setIsScrubbing(false);
-    if (scrubTimeoutRef.current) clearTimeout(scrubTimeoutRef.current);
-    videoRef.current?.pause();
+    // Không tắt video khi hover ra ngoài, vẫn tiếp tục phát
   };
 
   const togglePlayPreview = (e: React.MouseEvent) => {
@@ -124,6 +134,9 @@ export default function VideoCard({ product }: VideoCardProps) {
       videoRef.current?.pause();
       return;
     }
+    
+    // Phát event để tắt các video đang chạy khác
+    window.dispatchEvent(new CustomEvent('storefront_play_preview', { detail: product.sku }));
     
     setIsPreviewPlaying(true);
     
@@ -148,37 +161,23 @@ export default function VideoCard({ product }: VideoCardProps) {
     });
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !videoRef.current.duration || !isHovered) return;
+  const toggleFullscreen = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    // Tạm dừng video để tua nhanh theo chuột (Scrubbing)
-    if (!isScrubbing) {
-      setIsScrubbing(true);
-      videoRef.current.pause();
-    }
+    const elem = containerRef.current;
+    if (!elem) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, x / rect.width));
-    
-    // Giới hạn tua để tránh spam Google Drive (chỉ tua nếu lệch > 2%)
-    if (Math.abs(progress - percentage * 100) > 2) {
-      videoRef.current.currentTime = percentage * videoRef.current.duration;
-      setProgress(percentage * 100);
-    }
-
-    if (scrubTimeoutRef.current) clearTimeout(scrubTimeoutRef.current);
-    
-    // Tiếp tục phát lại sau khi ngừng di chuột 200ms
-    scrubTimeoutRef.current = setTimeout(() => {
-      setIsScrubbing(false);
-      videoRef.current?.play().catch(() => {});
-    }, 200);
-  };
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current && videoRef.current.duration) {
-      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+    if (!document.fullscreenElement) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if ((elem as any).webkitRequestFullscreen) {
+        (elem as any).webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
     }
   };
 
@@ -221,10 +220,10 @@ export default function VideoCard({ product }: VideoCardProps) {
 
   return (
     <div 
+      ref={containerRef}
       className="group relative rounded-lg overflow-hidden bg-slate-900 shadow-sm hover:shadow-xl transition-all duration-300 block aspect-video"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onMouseMove={handleMouseMove}
     >
       {/* Clickable Card Background to trigger Preview Play */}
       <button 
@@ -253,8 +252,6 @@ export default function VideoCard({ product }: VideoCardProps) {
           preload="none"
           onPlaying={handleVideoPlaying}
           onWaiting={handleVideoWaiting}
-          onPause={() => setIsPreviewPlaying(false)}
-          onTimeUpdate={handleTimeUpdate}
         />
       )}
 
@@ -316,27 +313,36 @@ export default function VideoCard({ product }: VideoCardProps) {
         </div>
       </div>
 
-      {/* Top Right: Save (Heart) */}
-      <button 
-        onClick={handleToggleWishlist}
-        className="absolute top-2 right-2 z-30 flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all pointer-events-auto"
-      >
-        <svg className={`w-4 h-4 ${isSaved ? 'fill-red-500 text-red-500' : 'fill-transparent'}`} stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-        <span className="text-xs font-medium hidden sm:inline-block">Lưu</span>
-      </button>
-
-      {/* Bottom Left: Chi Tiết (Mở Popup) */}
-      <div className="absolute bottom-2 left-2 z-30 pointer-events-auto">
+      {/* Top Right: Fullscreen & Save */}
+      <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 pointer-events-auto">
         <button 
-          onClick={(e) => { e.preventDefault(); setShowPreviewModal(true); }}
+          onClick={toggleFullscreen}
+          className="flex items-center justify-center p-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
+          title="Toàn màn hình"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+        </button>
+        <button 
+          onClick={handleToggleWishlist}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
+          title="Lưu yêu thích"
+        >
+          <svg className={`w-4 h-4 ${isSaved ? 'fill-red-500 text-red-500' : 'fill-transparent'}`} stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+          <span className="text-xs font-medium hidden sm:inline-block">Lưu</span>
+        </button>
+      </div>
+
+      {/* Bottom Left: Xem Chi Tiết */}
+      <div className="absolute bottom-2 left-2 z-30 pointer-events-auto">
+        <Link 
+          href={`/${safeSlug}`}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-xs font-medium">Chi tiết</span>
-        </button>
+        </Link>
       </div>
 
       {/* Bottom Right: Price & Cart */}
@@ -376,13 +382,7 @@ export default function VideoCard({ product }: VideoCardProps) {
         </button>
       </div>
 
-      {/* Progress Bar (Visible when playing/scrubbing) */}
-      <div className={`absolute bottom-0 left-0 right-0 h-1 bg-slate-900/80 z-20 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-        <div 
-          className="h-full bg-cyan-500 transition-all duration-75"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      {/* Note: Thẻ Progress Bar đã bị loại bỏ vì không còn sử dụng chức năng tua (scrubbing) */}
 
       {/* Preview Modal */}
       {showPreviewModal && demoId && (
