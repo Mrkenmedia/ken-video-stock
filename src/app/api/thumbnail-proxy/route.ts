@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('id');
+    const size = searchParams.get('size') || '600'; // Mặc định là 600px cho ảnh sắc nét ở grid
     
     if (!fileId) {
       return new Response('Missing file ID', { status: 400 });
@@ -17,8 +18,17 @@ export async function GET(request: Request) {
     });
 
     if (meta.data.thumbnailLink) {
+      let thumbUrl = meta.data.thumbnailLink;
+      
+      // Thay thế tham số kích thước mặc định (=s220) bằng kích thước mong muốn
+      if (thumbUrl.includes('=s')) {
+        thumbUrl = thumbUrl.replace(/=s\d+$/, `=s${size}`);
+      } else {
+        thumbUrl = `${thumbUrl}=s${size}`;
+      }
+
       // Fetch the thumbnail image from our server to bypass Google login restrictions
-      const thumbRes = await fetch(meta.data.thumbnailLink);
+      const thumbRes = await fetch(thumbUrl);
       if (!thumbRes.ok) {
         return new Response('Failed to fetch thumbnail from Google', { status: thumbRes.status });
       }

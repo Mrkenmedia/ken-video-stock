@@ -36,7 +36,7 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
     return '';
   };
 
-  const getMediaSrc = (url: string, type: 'image' | 'video') => {
+  const getMediaSrc = (url: string, type: 'image' | 'video', size?: string) => {
     if (!url) return '';
     
     // Extract Drive ID from full URL or use raw ID
@@ -51,7 +51,9 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
     
     if (isDriveId) {
       // Proxy videos qua drive-proxy, ảnh qua thumbnail-proxy (hoặc chung)
-      return type === 'video' ? `/api/drive-proxy?id=${driveId}` : `/api/thumbnail-proxy?id=${driveId}`;
+      return type === 'video' 
+        ? `/api/drive-proxy?id=${driveId}` 
+        : `/api/thumbnail-proxy?id=${driveId}${size ? `&size=${size}` : ''}`;
     }
     return url;
   };
@@ -137,7 +139,7 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
           <div className="absolute inset-0 w-full h-full">
             {banners.map((banner, index) => {
               const isActive = index === activeSlide;
-              const mediaSrc = getMediaSrc(banner.mediaUrl, banner.mediaType as 'image' | 'video');
+              const mediaSrc = getMediaSrc(banner.mediaUrl, banner.mediaType as 'image' | 'video', '2048');
               const youtubeId = banner.mediaType === 'video' ? extractYouTubeId(banner.mediaUrl) : '';
               
               return (

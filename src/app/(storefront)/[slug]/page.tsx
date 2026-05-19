@@ -94,7 +94,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const thumbnail = (product.thumbnailUrl && !isGoogleThumb)
     ? product.thumbnailUrl
     : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
-    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}` : '');
+    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}&size=1024` : '');
 
   return (
     <div className="container mx-auto px-6 py-12">
