@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { BRAND_CONFIG } from '@/config/brand';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,16 +44,18 @@ export default function LoginPage() {
 
       <div className="relative max-w-md w-full space-y-8 bg-slate-900/60 backdrop-blur-xl p-10 rounded-3xl border border-slate-800 shadow-2xl">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 mb-6">
-            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
+          <div className="mx-auto w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-cyan-500/20 border border-slate-800 bg-slate-950 flex items-center justify-center mb-6">
+            <img 
+              src={BRAND_CONFIG.logo.src} 
+              alt={BRAND_CONFIG.logo.alt} 
+              className="w-full h-full object-cover"
+            />
           </div>
           <h2 className="mt-2 text-3xl font-extrabold text-white tracking-tight">
             Đăng nhập Admin
           </h2>
           <p className="mt-2 text-sm text-slate-400">
-            Nhập mật khẩu để truy cập bảng điều khiển KenVideo
+            Nhập mật khẩu để truy cập bảng điều khiển {BRAND_CONFIG.name}
           </p>
         </div>
 

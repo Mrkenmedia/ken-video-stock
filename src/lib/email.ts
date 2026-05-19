@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { BRAND_CONFIG } from '@/config/brand';
 
 export async function sendEmail({
   to,
@@ -28,7 +29,7 @@ export async function sendEmail({
     });
 
     const info = await transporter.sendMail({
-      from: `"KenVideo" <${SMTP_USER}>`,
+      from: `"${BRAND_CONFIG.name}" <${SMTP_USER}>`,
       to,
       subject,
       html,

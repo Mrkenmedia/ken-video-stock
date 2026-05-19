@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { BRAND_CONFIG } from "@/config/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,16 +16,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Ken Video Stock",
-    default: "Ken Video Stock | Nền tảng Video 4K Bản Quyền",
+    template: `%s | ${BRAND_CONFIG.name}`,
+    default: `${BRAND_CONFIG.name} | ${BRAND_CONFIG.slogan}`,
   },
   description: "Mua bán Stock Video 4K, VFX, Footage chuyên nghiệp. Thanh toán tự động, nhận file ngay lập tức qua Google Drive.",
   keywords: ["stock video", "vfx", "footage", "4k video", "video bản quyền"],
   authors: [{ name: "Ken" }],
   openGraph: {
-    title: "Ken Video Stock",
-    description: "Nền tảng Video 4K Bản Quyền. Thanh toán tự động nhận file ngay.",
-    siteName: "Ken Video Stock",
+    title: BRAND_CONFIG.name,
+    description: `Nền tảng Video 4K Bản Quyền. Thanh toán tự động nhận file ngay.`,
+    siteName: BRAND_CONFIG.name,
     locale: "vi_VN",
     type: "website",
   },

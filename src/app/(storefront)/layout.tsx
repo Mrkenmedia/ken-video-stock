@@ -4,6 +4,7 @@ import CartDrawer from '@/components/storefront/CartDrawer';
 import FlashSaleBanner from '@/components/storefront/FlashSaleBanner';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { BRAND_CONFIG } from '@/config/brand';
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -16,12 +17,16 @@ export default async function StorefrontLayout({ children }: { children: React.R
         {/* Premium Navbar */}
         <header className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all duration-300">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/10 group-hover:shadow-cyan-500/30 transition-all duration-300 border border-slate-800 bg-slate-950 flex items-center justify-center">
+              <img 
+                src={BRAND_CONFIG.logo.src} 
+                alt={BRAND_CONFIG.logo.alt} 
+                className="w-full h-full object-cover"
+              />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
-              KenVideo
+            <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300">
+              {BRAND_CONFIG.name}
             </span>
           </Link>
 
@@ -65,7 +70,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
       {/* Footer */}
       <footer className="border-t border-slate-800/60 bg-slate-950/50 pt-16 pb-8 mt-20">
         <div className="container mx-auto px-6 text-center text-slate-500 text-sm">
-          <p>© {new Date().getFullYear()} Ken Video Stock Platform. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {BRAND_CONFIG.name}. All rights reserved.</p>
           <p className="mt-2">Tối ưu hóa bởi Google Drive & Next.js</p>
         </div>
       </footer>

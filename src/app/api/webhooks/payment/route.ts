@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getProducts, grantDrivePermission, createOrderLog, sheets, SPREADSHEET_ID, getSettings } from '@/lib/google';
 import { sendTelegramNotification } from '@/lib/telegram';
 import { sendEmail } from '@/lib/email';
+import { BRAND_CONFIG } from '@/config/brand';
 
 export async function POST(request: Request) {
   try {
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     const settings = await getSettings();
     const emailHtmlRaw = settings.emailTemplate || `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #0891b2;">Cảm ơn bạn đã mua hàng tại KenVideo!</h2>
+        <h2 style="color: #0891b2;">Cảm ơn bạn đã mua hàng tại ${BRAND_CONFIG.name}!</h2>
         <p>Đơn hàng <b>{{order_id}}</b> của bạn đã được xử lý thành công.</p>
         <p>Bạn đã có quyền truy cập vào các file sau bằng email <b>{{customer_email}}</b>:</p>
         <ul style="padding-left: 20px;">
@@ -189,7 +190,7 @@ export async function POST(request: Request) {
 
     await sendEmail({
       to: customerEmail,
-      subject: `[KenVideo] Đơn hàng ${orderId} đã hoàn tất - Link tải Video của bạn`,
+      subject: `[${BRAND_CONFIG.name}] Đơn hàng ${orderId} đã hoàn tất - Link tải Video của bạn`,
       html: finalEmailHtml,
     });
 
