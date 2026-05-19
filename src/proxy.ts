@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server';
  * Middleware to protect admin routes.
  * Expects a cookie named `admin-token` matching `process.env.ADMIN_TOKEN`.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Chỉ kiểm tra các route bắt đầu bằng /admin
