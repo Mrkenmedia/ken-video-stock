@@ -23,7 +23,58 @@ export default async function NewProductPage() {
       </div>
 
       <div className="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
-        <form action={submitNewProduct} className="p-8 space-y-8">
+        <form action={submitNewProduct} className="p-8 space-y-8" id="newProductForm">
+          {/* Script tự động trích xuất thông tin video */}
+          <script dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                window.addEventListener('DOMContentLoaded', () => {
+                  const videoFileInput = document.querySelector('input[name="videoFile"]');
+                  const demoFileInput = document.querySelector('input[name="demoFile"]');
+                  const resolutionInput = document.querySelector('input[name="resolution"]');
+                  const durationInput = document.querySelector('input[name="duration"]');
+                  
+                  const handleFileChange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    
+                    video.onloadedmetadata = function() {
+                      window.URL.revokeObjectURL(video.src);
+                      
+                      // Cập nhật Độ phân giải
+                      const w = video.videoWidth;
+                      const h = video.videoHeight;
+                      let resText = w + 'x' + h;
+                      if (w >= 3840 || h >= 2160 || w === 2160) resText = '4K Ultra HD';
+                      else if (w >= 2560 || h >= 1440) resText = '2K QHD';
+                      else if (w >= 1920 || h >= 1080) resText = '1080p Full HD';
+                      else if (w >= 1280 || h >= 720) resText = '720p HD';
+                      
+                      if (resolutionInput) {
+                        resolutionInput.value = resText;
+                      }
+                      
+                      // Cập nhật Thời lượng
+                      if (durationInput && video.duration) {
+                        const totalSeconds = Math.round(video.duration);
+                        const mins = Math.floor(totalSeconds / 60);
+                        const secs = totalSeconds % 60;
+                        durationInput.value = mins + ':' + (secs < 10 ? '0' : '') + secs;
+                      }
+                    };
+                    
+                    video.src = URL.createObjectURL(file);
+                  };
+                  
+                  if (videoFileInput) videoFileInput.addEventListener('change', handleFileChange);
+                  if (demoFileInput) demoFileInput.addEventListener('change', handleFileChange);
+                });
+              }
+            `
+          }} />
           
           {/* Section 1: Thông tin cơ bản */}
           <div>
@@ -76,7 +127,7 @@ export default async function NewProductPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Độ phân giải</label>
-                  <input type="text" name="resolution" defaultValue="4K Ultra HD" placeholder="VD: 4K Ultra HD" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                  <input type="text" name="resolution" placeholder="VD: 4K Ultra HD (Tự động điền khi chọn file)" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Thời lượng</label>
@@ -84,7 +135,7 @@ export default async function NewProductPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Khung hình / FPS</label>
-                  <input type="text" name="fps" defaultValue="60 FPS" placeholder="VD: 60 FPS" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                  <input type="text" name="fps" defaultValue="29.9 FPS" placeholder="VD: 29.9 FPS" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Dung lượng file</label>
@@ -143,7 +194,7 @@ export default async function NewProductPage() {
                 <h4 className="font-semibold text-gray-800">Định dạng MP4</h4>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Giá MP4 (VNĐ) *</label>
-                  <input required type="number" name="priceMp4" defaultValue="0" min="0" step="1000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                  <input required type="number" name="priceMp4" defaultValue="800000" min="0" step="1000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Drive ID - File Gốc MP4</label>
@@ -156,7 +207,7 @@ export default async function NewProductPage() {
                 <h4 className="font-semibold text-gray-800">Định dạng MOV</h4>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Giá MOV (VNĐ)</label>
-                  <input type="number" name="priceMov" defaultValue="0" min="0" step="1000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+                  <input type="number" name="priceMov" defaultValue="1200000" min="0" step="1000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Drive ID - File Gốc MOV</label>

@@ -25,7 +25,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300">
+            <span className="text-xl md:text-2xl font-black tracking-tight text-white">
               {BRAND_CONFIG.name}
             </span>
           </Link>

@@ -104,11 +104,11 @@ export default function VideoCard({ product }: VideoCardProps) {
     product.thumbnailUrl.includes('google.com')
   );
 
-  // YouTube thumbnail: dùng hqdefault thumbnail, Google Drive dùng proxy bảo mật không cần login, link ngoài dùng trực tiếp
+  // YouTube thumbnail: dùng maxresdefault để có chất lượng cao nhất, Google Drive dùng proxy với size lớn, link ngoài dùng trực tiếp
   const bgImage = (product.thumbnailUrl && !isGoogleThumb)
     ? product.thumbnailUrl
-    : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
-    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}` : '/placeholder-video.jpg');
+    : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '')
+    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}&size=1920` : '/placeholder-video.jpg');
 
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
   const safeSlug = slugify(product.slug || product.sku);
@@ -238,14 +238,14 @@ export default function VideoCard({ product }: VideoCardProps) {
         src={bgImage} 
         alt={product.name}
         loading="lazy"
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
+        className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
       />
 
       {/* Video Preview (Google Drive) */}
       {demoId && !youtubeId && (
         <video
           ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isPreviewPlaying ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-500 ${isPreviewPlaying ? 'opacity-100' : 'opacity-0'}`}
           muted
           loop
           playsInline
@@ -257,10 +257,10 @@ export default function VideoCard({ product }: VideoCardProps) {
 
       {/* YouTube Preview */}
       {youtubeId && isPreviewPlaying && (
-        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0 bg-black">
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-0 bg-black flex items-center justify-center">
           <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&loop=1&playlist=${youtubeId}`}
-            className="absolute top-1/2 left-1/2 w-[150%] h-[150%] -translate-x-1/2 -translate-y-1/2"
+            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&loop=1&playlist=${youtubeId}&vq=hd1080`}
+            className="w-full h-full object-contain"
             style={{ border: 0 }}
             allow="autoplay; encrypted-media"
             title={product.name}
@@ -299,10 +299,10 @@ export default function VideoCard({ product }: VideoCardProps) {
           {product.name}
         </h3>
         
-        {/* Resolution & Format (Visible on Hover) */}
+        {/* ID & Format (Visible on Hover) */}
         <div className={`flex items-center gap-1.5 transition-all duration-300 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
           <span className="text-[10px] font-bold tracking-wide bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded drop-shadow-md border border-white/10">
-            {product.resolution || '4K'} {product.duration ? `• ${product.duration}` : ''}
+            ID: {generateIdFromSku(product.sku)}
           </span>
           {product.priceMp4 > 0 && <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded shadow-sm">MP4</span>}
           {discountBadgePct > 0 && (
@@ -313,8 +313,9 @@ export default function VideoCard({ product }: VideoCardProps) {
         </div>
       </div>
 
-      {/* Top Right: Fullscreen & Save */}
+      {/* Top Right: Actions (Fullscreen, Download, Save) */}
       <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 pointer-events-auto">
+        {/* Nút Toàn màn hình */}
         <button 
           onClick={toggleFullscreen}
           className="flex items-center justify-center p-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
@@ -322,6 +323,25 @@ export default function VideoCard({ product }: VideoCardProps) {
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
         </button>
+
+        {/* Nút Tải Demo (Chỉ áp dụng cho Drive) */}
+        {demoId && !youtubeId && (
+          <a 
+            href={`/api/drive-proxy?id=${demoId}`}
+            download={`${safeSlug}-demo.mp4`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center p-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all hover:text-cyan-400"
+            title="Tải video Demo"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </a>
+        )}
+
+        {/* Nút Yêu thích */}
         <button 
           onClick={handleToggleWishlist}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
@@ -336,7 +356,7 @@ export default function VideoCard({ product }: VideoCardProps) {
       <div className="absolute bottom-2 left-2 z-30 pointer-events-auto">
         <Link 
           href={`/${safeSlug}`}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-black/40 hover:bg-black/80 backdrop-blur-sm text-white transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-lg text-white font-bold transition-all"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -360,7 +380,7 @@ export default function VideoCard({ product }: VideoCardProps) {
             return (
               <>
                 {isDiscounted && origPrice > flashPrice && (
-                  <span className="text-[10px] text-slate-400 line-through leading-none drop-shadow">
+                  <span className="text-[10px] text-white line-through leading-none drop-shadow">
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(origPrice)}
                   </span>
                 )}
@@ -450,7 +470,7 @@ export default function VideoCard({ product }: VideoCardProps) {
                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(flashPrice)}
                        </span>
                        {isDiscounted && origPrice > flashPrice && (
-                         <span className="text-sm text-slate-500 line-through">
+                         <span className="text-sm text-white line-through">
                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(origPrice)}
                          </span>
                        )}
