@@ -6,7 +6,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const banners = await getBanners();
-    return NextResponse.json(banners);
+    return NextResponse.json(banners, {
+      headers: {
+        // Banner thay đổi rất ít → cache 2 phút, stale 10 phút
+        'Cache-Control': 'public, max-age=120, stale-while-revalidate=600',
+      },
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch banners' }, { status: 500 });
   }

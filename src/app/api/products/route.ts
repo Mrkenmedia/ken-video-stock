@@ -14,7 +14,14 @@ export async function GET() {
         priceMp4: p.priceMp4,
         priceMov: p.priceMov,
       }));
-    return NextResponse.json(activeProducts);
+
+    return NextResponse.json(activeProducts, {
+      headers: {
+        // Cache tại browser/CDN 60 giây, sau đó dùng lại cache (stale) trong 5 phút
+        // trong khi server âm thầm làm mới – giảm số request tới Google Sheets
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+      },
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
   }
