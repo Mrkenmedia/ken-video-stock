@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import VideoCard from './VideoCard';
 import { Product, Banner } from '@/types';
@@ -95,6 +95,70 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
   const [sortBy, setSortBy] = useState('stt');
   const [activeSlide, setActiveSlide] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(80);
+
+  // Swipe / Drag dùng useRef để tránh re-render
+  const bannerRef = useRef<HTMLElement>(null);
+  const dragState = useRef({ startX: 0, endX: 0, isDragging: false });
+  const minSwipeDistance = 50;
+
+  const handleSwipeEnd = useCallback(() => {
+    const { startX, endX, isDragging } = dragState.current;
+    if (!isDragging) return;
+    dragState.current.isDragging = false;
+    const distance = startX - endX;
+    if (Math.abs(distance) < minSwipeDistance) return;
+    if (distance > 0 && banners.length > 1) {
+      // Vuốt trái → slide tiếp
+      setActiveSlide(prev => (prev + 1) % banners.length);
+    } else if (distance < 0 && banners.length > 1) {
+      // Vuốt phải → slide trước
+      setActiveSlide(prev => (prev - 1 + banners.length) % banners.length);
+    }
+  }, [banners.length]);
+
+  useEffect(() => {
+    const el = bannerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      dragState.current = { startX: e.touches[0].clientX, endX: e.touches[0].clientX, isDragging: true };
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (dragState.current.isDragging) {
+        dragState.current.endX = e.touches[0].clientX;
+      }
+    };
+    const onTouchEnd = () => handleSwipeEnd();
+
+    const onMouseDown = (e: MouseEvent) => {
+      dragState.current = { startX: e.clientX, endX: e.clientX, isDragging: true };
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (dragState.current.isDragging) {
+        dragState.current.endX = e.clientX;
+      }
+    };
+    const onMouseUp = () => handleSwipeEnd();
+    const onMouseLeave = () => handleSwipeEnd();
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('mousedown', onMouseDown);
+    el.addEventListener('mousemove', onMouseMove);
+    el.addEventListener('mouseup', onMouseUp);
+    el.addEventListener('mouseleave', onMouseLeave);
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('mousedown', onMouseDown);
+      el.removeEventListener('mousemove', onMouseMove);
+      el.removeEventListener('mouseup', onMouseUp);
+      el.removeEventListener('mouseleave', onMouseLeave);
+    };
+  }, [handleSwipeEnd]);
 
   // Tính toán chiều cao thực tế của header để ghim (sticky) thanh filter
   useEffect(() => {
@@ -229,7 +293,10 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
     <>
       {/* Hero / Banner Carousel Section */}
       {banners && banners.length > 0 ? (
-        <section className="relative w-full aspect-video min-h-[300px] max-h-[800px] bg-slate-950 overflow-hidden">
+        <section 
+          ref={bannerRef}
+          className="relative w-full aspect-video min-h-[300px] max-h-[800px] bg-slate-950 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+        >
           {/* Banner slides */}
           <div className="absolute inset-0 w-full h-full">
             {banners.map((banner, index) => {
@@ -243,9 +310,9 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
                   className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
                 >
                   <div className="relative w-full h-full flex items-center justify-center">
-                    {/* Clickable background overlay link if linkUrl exists (separating Link from the interactive Search Bar) */}
+                    {/* Clickable background overlay link if linkUrl exists */}
                     {banner.linkUrl && (
-                      <Link href={banner.linkUrl} className="absolute inset-0 z-10 cursor-pointer">
+                      <Link href={banner.linkUrl} className="absolute inset-0 z-10 cursor-pointer touch-none pointer-events-auto" draggable={false}>
                         <span className="sr-only">Xem chi tiết {banner.title}</span>
                       </Link>
                     )}
@@ -313,35 +380,9 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
             })}
           </div>
 
-          {/* Navigation Arrows */}
-          {banners.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveSlide(prev => (prev - 1 + banners.length) % banners.length);
-                }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-slate-900/50 backdrop-blur hover:bg-cyan-500/85 hover:text-white text-slate-300 border border-slate-700 flex items-center justify-center transition-all shadow-lg"
-                aria-label="Previous slide"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveSlide(prev => (prev + 1) % banners.length);
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-slate-900/50 backdrop-blur hover:bg-cyan-500/85 hover:text-white text-slate-300 border border-slate-700 flex items-center justify-center transition-all shadow-lg"
-                aria-label="Next slide"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </>
-          )}
-
           {/* Dots Indicator */}
           {banners.length > 1 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2">
               {banners.map((_, index) => (
                 <button
                   key={index}
