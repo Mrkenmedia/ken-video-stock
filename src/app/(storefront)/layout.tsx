@@ -12,11 +12,11 @@ import { getSettings } from '@/lib/google';
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const [session, settings] = await Promise.all([
     getServerSession(authOptions),
-    getSettings().catch(() => ({})),
+    getSettings().catch(() => ({} as any)),
   ]);
 
-  const footerCopyright = settings.footerCopyright || `© ${new Date().getFullYear()} ${BRAND_CONFIG.name}. All rights reserved.`;
-  const footerSubtext = settings.footerSubtext || 'Tối ưu hóa bởi Google Drive & Next.js';
+  const footerCopyright = settings?.footerCopyright || `© ${new Date().getFullYear()} ${BRAND_CONFIG.name}. All rights reserved.`;
+  const footerSubtext = settings?.footerSubtext || 'Tối ưu hóa bởi Google Drive & Next.js';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500/30">
