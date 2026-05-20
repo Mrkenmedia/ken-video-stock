@@ -56,13 +56,17 @@ async function cachedSpreadsheetGet(range: string) {
   return promise;
 }
 
+export function clearProductsCache() {
+  delete promiseCache['Products!A2:T'];
+}
+
 /**
  * Lấy danh sách sản phẩm từ tab 'Products'
  */
 export async function getProducts(): Promise<Product[]> {
   try {
     const [prodResponse, settings] = await Promise.all([
-      cachedSpreadsheetGet('Products!A2:S'),
+      cachedSpreadsheetGet('Products!A2:T'),
       getSettings().catch(() => ({} as Partial<Settings>))
     ]);
 
@@ -124,6 +128,7 @@ export async function getProducts(): Promise<Product[]> {
         duration: row[16] || '',
         fps: row[17] || '60 FPS',
         size: row[18] || '',
+        youtubeDemoUrl: row[19] || '', // Cột T – YouTube URL để embed preview (không tốn bandwidth)
       };
     });
   } catch (error) {
@@ -210,7 +215,7 @@ export async function addProduct(product: Omit<Product, 'slug'> & { slug?: strin
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Products!A${nextRow}:S${nextRow}`,
+      range: `Products!A${nextRow}:T${nextRow}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [
@@ -238,7 +243,7 @@ export async function addProduct(product: Omit<Product, 'slug'> & { slug?: strin
         ]
       }
     });
-    delete promiseCache['Products!A2:S'];
+    delete promiseCache['Products!A2:T'];
     return true;
   } catch (error) {
     console.error('Error adding product to Sheets:', error);
@@ -288,11 +293,11 @@ export async function updateProduct(sku: string, product: Partial<Product>) {
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Products!A${rowNumber}:S${rowNumber}`,
+      range: `Products!A${rowNumber}:T${rowNumber}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [updatedRow] }
     });
-    delete promiseCache['Products!A2:S'];
+    delete promiseCache['Products!A2:T'];
     return true;
   } catch (error) {
     console.error(`Error updating product ${sku}:`, error);
@@ -341,10 +346,56 @@ export async function deleteProduct(sku: string) {
         ]
       }
     });
-    delete promiseCache['Products!A2:S'];
+    delete promiseCache['Products!A2:T'];
     return true;
   } catch (error) {
     console.error(`Error deleting product ${sku}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Xóa toàn bộ sản phẩm khỏi Google Sheets (giữ lại header)
+ */
+export async function deleteAllProducts() {
+  try {
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      includeGridData: false,
+    });
+    
+    const sheet = response.data.sheets?.find(s => s.properties?.title === 'Products');
+    if (!sheet) return false;
+    const sheetId = sheet.properties?.sheetId;
+
+    const valuesRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Products!A:S',
+    });
+    const rows = valuesRes.data.values;
+    if (!rows || rows.length <= 1) return true; // Only header or empty
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: 'ROWS',
+                startIndex: 1, // Skip header row (0-indexed)
+                endIndex: rows.length
+              }
+            }
+          }
+        ]
+      }
+    });
+    delete promiseCache['Products!A2:T'];
+    return true;
+  } catch (error) {
+    console.error(`Error deleting all products:`, error);
     return false;
   }
 }
@@ -807,13 +858,13 @@ export async function ensureBannersSheet(): Promise<void> {
           ],
         },
       });
-      // Add default headers: ID, Title, Subtitle, MediaType, MediaUrl, LinkUrl, Order, Status
+      // Add default headers: ID, Title, Subtitle, MediaType, MediaUrl, LinkUrl, Order, Status, Opacity
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'Banners!A1:H1',
+        range: 'Banners!A1:I1',
         valueInputOption: 'USER_ENTERED',
         requestBody: { 
-          values: [['ID', 'Title', 'Subtitle', 'MediaType', 'MediaUrl', 'LinkUrl', 'Order', 'Status']] 
+          values: [['ID', 'Title', 'Subtitle', 'MediaType', 'MediaUrl', 'LinkUrl', 'Order', 'Status', 'Opacity']] 
         },
       });
     }
@@ -827,7 +878,10 @@ export async function getBanners(): Promise<Banner[]> {
     // NOTE: ensureBannersSheet() must NOT be called here — it fires an extra
     // uncached sheets.spreadsheets.get() on EVERY storefront render and is the
     // primary cause of "Quota exceeded" errors. Call it only from admin routes.
-    const response = await cachedSpreadsheetGet('Banners!A2:H');
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Banners!A2:I',
+    });
     const rows = response.data.values;
     if (!rows || rows.length === 0) return [];
     
@@ -841,6 +895,7 @@ export async function getBanners(): Promise<Banner[]> {
         linkUrl: row[5] || '',
         order: parseInt(row[6]) || 0,
         status: (row[7] as 'active' | 'inactive') || 'active',
+        opacity: row[8] !== undefined && row[8] !== '' ? parseInt(row[8]) : 60,
       }))
       .filter((b: Banner) => b.id)
       .sort((a: any, b: any) => a.order - b.order);
@@ -856,7 +911,7 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<boolean> {
     const id = 'b_' + Math.random().toString(36).substring(2, 11);
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Banners!A:H',
+      range: 'Banners!A:I',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [[
@@ -868,10 +923,11 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<boolean> {
           banner.linkUrl || '',
           banner.order,
           banner.status || 'active',
+          banner.opacity !== undefined ? banner.opacity.toString() : '60',
         ]],
       },
     });
-    delete promiseCache['Banners!A2:H'];
+    delete promiseCache['Banners!A2:I'];
     return true;
   } catch (error) {
     console.error('Error adding banner:', error);
@@ -882,18 +938,18 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<boolean> {
 export async function updateBanner(id: string, banner: Partial<Banner>): Promise<boolean> {
   try {
     await ensureBannersSheet();
-    const banners = await getBanners();
-    const index = banners.findIndex(b => b.id === id);
-    if (index === -1) return false;
-    
-    const rowIndex = index + 2; // 1-based, +1 for header
-    
-    // Fetch the current row first to merge values
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Banners!A${rowIndex}:H${rowIndex}`,
+      range: 'Banners!A:I',
     });
-    const row = response.data.values?.[0] || [];
+    const rows = response.data.values;
+    if (!rows) return false;
+
+    const index = rows.findIndex(row => row[0] === id);
+    if (index === -1) return false;
+    
+    const rowIndex = index + 1; // Google Sheets row is 1-based (index 0 is row 1)
+    const row = rows[index];
     
     const updatedRow = [
       id,
@@ -904,15 +960,16 @@ export async function updateBanner(id: string, banner: Partial<Banner>): Promise
       banner.linkUrl !== undefined ? banner.linkUrl : (row[5] || ''),
       banner.order !== undefined ? banner.order : (row[6] || 0),
       banner.status !== undefined ? banner.status : (row[7] || 'active'),
+      banner.opacity !== undefined ? banner.opacity.toString() : (row[8] || '60'),
     ];
     
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Banners!A${rowIndex}:H${rowIndex}`,
+      range: `Banners!A${rowIndex}:I${rowIndex}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [updatedRow] },
     });
-    delete promiseCache['Banners!A2:H'];
+    delete promiseCache['Banners!A2:I'];
     return true;
   } catch (error) {
     console.error('Error updating banner:', error);
@@ -923,8 +980,14 @@ export async function updateBanner(id: string, banner: Partial<Banner>): Promise
 export async function deleteBanner(id: string): Promise<boolean> {
   try {
     await ensureBannersSheet();
-    const banners = await getBanners();
-    const index = banners.findIndex(b => b.id === id);
+    const valuesRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Banners!A:I',
+    });
+    const rows = valuesRes.data.values;
+    if (!rows) return false;
+
+    const index = rows.findIndex(row => row[0] === id);
     if (index === -1) return false;
     
     const sheetInfo = await sheets.spreadsheets.get({
@@ -935,7 +998,7 @@ export async function deleteBanner(id: string): Promise<boolean> {
     if (!sheet) return false;
     
     const sheetId = sheet.properties?.sheetId;
-    const rowIndex = index + 1; // 0-based for deleteDimension, skipping header (index 0 is header row)
+    const rowIndex = index; // 0-based for deleteDimension
     
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
@@ -954,7 +1017,7 @@ export async function deleteBanner(id: string): Promise<boolean> {
         ],
       },
     });
-    delete promiseCache['Banners!A2:H'];
+    delete promiseCache['Banners!A2:I'];
     return true;
   } catch (error) {
     console.error('Error deleting banner:', error);

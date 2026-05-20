@@ -26,19 +26,8 @@ const nextConfig: NextConfig = {
         ],
       },
 
-      // ── Cache dài hạn cho static assets (JS, CSS, fonts, images) ────────
-      // Next.js tự thêm content hash vào tên file → an toàn khi cache immutable
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-
       // ── Cache tài nguyên tĩnh trong /public ─────────────────────────────
+      // (/_next/static được Next.js + Vercel tự xử lý – không cần đặt thủ công)
       {
         source: '/:path*(png|jpg|jpeg|svg|webp|ico|woff|woff2|ttf|otf)',
         headers: [

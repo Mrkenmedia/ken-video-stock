@@ -40,14 +40,78 @@ export default async function EditProductPage({ params }: { params: Promise<{ sk
       </div>
 
       <div className="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
-        <form action={editProduct} className="p-8 space-y-8">
+        <form action={editProduct} className="p-8 space-y-8" id="editProductForm">
           <input type="hidden" name="originalSku" value={product.sku} />
+          
+          {/* Script tự động trích xuất thông tin video */}
+          <script dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                window.addEventListener('DOMContentLoaded', () => {
+                  const videoFileInput = document.querySelector('input[name="videoFile"]');
+                  const demoFileInput = document.querySelector('input[name="demoFile"]');
+                  const resolutionInput = document.querySelector('input[name="resolution"]');
+                  const durationInput = document.querySelector('input[name="duration"]');
+                  
+                  const handleFileChange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    
+                    video.onloadedmetadata = function() {
+                      window.URL.revokeObjectURL(video.src);
+                      
+                      // Cập nhật Độ phân giải
+                      const w = video.videoWidth;
+                      const h = video.videoHeight;
+                      let resText = w + 'x' + h;
+                      if (w >= 3840 || h >= 2160 || w === 2160) resText = '4K Ultra HD';
+                      else if (w >= 2560 || h >= 1440) resText = '2K QHD';
+                      else if (w >= 1920 || h >= 1080) resText = '1080p Full HD';
+                      else if (w >= 1280 || h >= 720) resText = '720p HD';
+                      
+                      if (resolutionInput) {
+                        resolutionInput.value = resText;
+                      }
+                      
+                      // Cập nhật Thời lượng
+                      if (durationInput && video.duration) {
+                        const totalSeconds = Math.round(video.duration);
+                        const mins = Math.floor(totalSeconds / 60);
+                        const secs = totalSeconds % 60;
+                        durationInput.value = mins + ':' + (secs < 10 ? '0' : '') + secs;
+                      }
+                    };
+                    
+                    video.src = URL.createObjectURL(file);
+                  };
+                  
+                  if (videoFileInput) videoFileInput.addEventListener('change', handleFileChange);
+                  if (demoFileInput) demoFileInput.addEventListener('change', handleFileChange);
+                });
+              }
+            `
+          }} />
           
           {/* Section 1: Thông tin cơ bản */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Thông tin cơ bản</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mã SKU * (Không thể sửa)</label>
+                <input required type="text" name="sku" defaultValue={product.sku} readOnly className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-gray-100 cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mã ID (Không bắt buộc)</label>
+                <input type="text" name="id" defaultValue={product.id || ''} placeholder="Bỏ trống để tự sinh" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Số thứ tự (STT)</label>
+                <input type="number" name="stt" defaultValue={product.stt || ''} placeholder="VD: 1, 2, 3" min="1" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
+              </div>
+              <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tên Video *</label>
                 <input required type="text" name="name" defaultValue={product.name} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white" />
               </div>
@@ -140,10 +204,17 @@ export default async function EditProductPage({ params }: { params: Promise<{ sk
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Video Demo - Google Drive ID hoặc YouTube URL (Bắt buộc nếu không tải file lên)</label>
-                <input type="text" name="driveDemoId" defaultValue={product.driveDemoId} placeholder="Drive ID: 1Bxy...  |  YouTube: https://youtu.be/..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
-                <p className="mt-1.5 text-xs text-gray-400">Hỗ trợ: Google Drive ID, link Drive đầy đủ, link YouTube (watch / youtu.be / shorts)</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Drive ID - Tải file Demo miễn phí</label>
+                  <input type="text" name="driveDemoId" defaultValue={product.driveDemoId} placeholder="Drive ID: 1Bxy..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                  <p className="mt-1.5 text-xs text-gray-400">Dùng làm link cho nút "Tải bản Demo miễn phí"</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">YouTube URL - Xem trước Demo (Khuyên dùng)</label>
+                  <input type="text" name="youtubeDemoUrl" defaultValue={product.youtubeDemoUrl || ''} placeholder="https://youtu.be/..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                  <p className="mt-1.5 text-xs text-gray-400">Dùng làm trình phát video trên trang web (tiết kiệm băng thông server)</p>
+                </div>
               </div>
             </div>
           </div>

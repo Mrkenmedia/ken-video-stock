@@ -64,29 +64,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
       .then(data => { if (Array.isArray(data)) setTiers(data); })
       .catch(e => console.error('Tiers fetch error', e));
 
-    // Đồng bộ giá mới nhất của sản phẩm trong giỏ hàng từ Google Sheets
+    // Đồng bộ giá ngay lần đầu load
     if (initialItems.length > 0) {
-      fetch('/api/products')
-        .then(r => r.json())
-        .then(latestProducts => {
-          if (Array.isArray(latestProducts)) {
-            setItems(prevItems => {
-              return prevItems.map(item => {
-                const matched = latestProducts.find(p => p.sku === item.sku);
-                if (matched) {
-                  const newPrice = item.format === 'MOV' ? matched.priceMov : matched.priceMp4;
-                  if (newPrice !== item.price) {
-                    return { ...item, price: newPrice };
-                  }
-                }
-                return item;
-              });
-            });
-          }
-        })
-        .catch(e => console.error('Failed to sync cart prices with server:', e));
+      syncPricesWithServer();
     }
   }, []);
+
+  const syncPricesWithServer = () => {
+    fetch('/api/products')
+      .then(r => r.json())
+      .then(latestProducts => {
+        if (Array.isArray(latestProducts)) {
+          setItems(prevItems => {
+            let hasChanges = false;
+            const newItems = prevItems.map(item => {
+              const matched = latestProducts.find(p => p.sku === item.sku);
+              if (matched) {
+                const newPrice = item.format === 'MOV' ? matched.priceMov : matched.priceMp4;
+                if (newPrice !== item.price) {
+                  hasChanges = true;
+                  return { ...item, price: newPrice };
+                }
+              }
+              return item;
+            });
+            return hasChanges ? newItems : prevItems;
+          });
+        }
+      })
+      .catch(e => console.error('Failed to sync cart prices with server:', e));
+  };
+
+  // Đồng bộ giá liên tục (real-time) mỗi 30 giây nếu giỏ hàng có sản phẩm
+  useEffect(() => {
+    if (items.length === 0 || !isLoaded) return;
+    const interval = setInterval(syncPricesWithServer, 30000);
+    return () => clearInterval(interval);
+  }, [items.length, isLoaded]);
 
   useEffect(() => {
     if (isLoaded) {

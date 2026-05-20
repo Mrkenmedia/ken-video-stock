@@ -2,18 +2,30 @@ import Link from 'next/link';
 import CartIcon from '@/components/storefront/CartIcon';
 import CartDrawer from '@/components/storefront/CartDrawer';
 import FlashSaleBanner from '@/components/storefront/FlashSaleBanner';
+import PromotionBanner from '@/components/storefront/PromotionBanner';
+import DetailButtonStyleLoader from '@/components/storefront/DetailButtonStyleLoader';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { BRAND_CONFIG } from '@/config/brand';
+import { getSettings } from '@/lib/google';
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
+  const [session, settings] = await Promise.all([
+    getServerSession(authOptions),
+    getSettings().catch(() => ({})),
+  ]);
+
+  const footerCopyright = settings.footerCopyright || `© ${new Date().getFullYear()} ${BRAND_CONFIG.name}. All rights reserved.`;
+  const footerSubtext = settings.footerSubtext || 'Tối ưu hóa bởi Google Drive & Next.js';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500/30">
+      {/* Inject màu nút Chi tiết từ settings */}
+      <DetailButtonStyleLoader />
       {/* Sticky wrapper: banner + navbar scroll together and stay fixed at top */}
-      <div className="sticky top-0 z-50">
+      <div id="main-header-wrapper" className="sticky top-0 z-50">
         <FlashSaleBanner />
+        <PromotionBanner />
         {/* Premium Navbar */}
         <header className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
@@ -70,8 +82,8 @@ export default async function StorefrontLayout({ children }: { children: React.R
       {/* Footer */}
       <footer className="border-t border-slate-800/60 bg-slate-950/50 pt-16 pb-8 mt-20">
         <div className="container mx-auto px-6 text-center text-slate-500 text-sm">
-          <p>© {new Date().getFullYear()} {BRAND_CONFIG.name}. All rights reserved.</p>
-          <p className="mt-2">Tối ưu hóa bởi Google Drive & Next.js</p>
+          <p>{footerCopyright}</p>
+          <p className="mt-2">{footerSubtext}</p>
         </div>
       </footer>
       <CartDrawer />

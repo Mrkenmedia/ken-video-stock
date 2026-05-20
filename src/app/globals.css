@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Nút "Chi tiết" — có thể ghi đè bởi DetailButtonStyleLoader */
+  --detail-btn-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --detail-btn-text: #ffffff;
 }
 
 @theme inline {

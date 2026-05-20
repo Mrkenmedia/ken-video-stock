@@ -1,0 +1,39 @@
+.banner {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(255, 122, 0, 0.9), rgba(255, 0, 150, 0.9));
+  color: #fff;
+  padding: 0.75rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: slideDown 0.8s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.content {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(255,255,255,0.7);
+}
+
+.timer {
+  font-family: 'Courier New', monospace;
+  background: rgba(0,0,0,0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}

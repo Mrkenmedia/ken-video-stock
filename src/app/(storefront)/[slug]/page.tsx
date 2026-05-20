@@ -37,14 +37,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const resolvedParams = await params;
   const products = await getCachedProducts();
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
-  
+
   const target = slugify(decodeURIComponent(resolvedParams.slug));
   const product = products.find(p => {
     if (p.status !== 'active') return false;
     const generatedId = slugify(generateIdFromSku(p.sku));
     return slugify(p.sku || '') === target || slugify(p.slug || '') === target || slugify(p.name || '') === target || generatedId === target;
   });
-  
+
   if (!product) return { title: 'Không tìm thấy' };
 
   return {
@@ -54,10 +54,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: product.name,
       description: `Mua video ${product.name} bản quyền chất lượng 4K/60fps.`,
-      images: product.thumbnailUrl 
-        ? [product.thumbnailUrl] 
-        : product.driveDemoId 
-          ? [`https://drive.google.com/thumbnail?id=${product.driveDemoId}&sz=w800`] 
+      images: product.thumbnailUrl
+        ? [product.thumbnailUrl]
+        : product.driveDemoId
+          ? [`https://drive.google.com/thumbnail?id=${product.driveDemoId}&sz=w800`]
           : [],
     }
   };
@@ -68,7 +68,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const resolvedParams = await params;
   const products = await getCachedProducts();
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
-  
+
   const target = slugify(decodeURIComponent(resolvedParams.slug));
   const product = products.find(p => {
     if (p.status !== 'active') return false;
@@ -82,13 +82,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  // Trích xuất Drive ID thuần (xử lý cả trường hợp full URL)
+  // demoId: chỉ dùng để TẢI demo (link thẳng Drive, không qua proxy → không tốn bandwidth)
   const demoId = extractDriveId(product.driveDemoId);
-  const youtubeId = extractYouTubeId(product.driveDemoId);
+
+  // youtubeId: dùng để EMBED xem preview (video stream từ YouTube, không qua Vercel)
+  // Ưu tiên cột T (youtubeDemoUrl) → fallback trích xuất từ driveDemoId (tương thích ngược)
+  const youtubeId =
+    extractYouTubeId(product.youtubeDemoUrl || '') ||
+    extractYouTubeId(product.driveDemoId || '');
+
   const driveThumbId = demoId || extractDriveId(product.driveGocMp4Id) || extractDriveId(product.driveGocMovId);
   const isGoogleThumb = product.thumbnailUrl && (
-    product.thumbnailUrl.includes('googleusercontent.com') || 
-    product.thumbnailUrl.includes('drive.google.com') || 
+    product.thumbnailUrl.includes('googleusercontent.com') ||
+    product.thumbnailUrl.includes('drive.google.com') ||
     product.thumbnailUrl.includes('google.com')
   );
   const thumbnail = (product.thumbnailUrl && !isGoogleThumb)
@@ -102,15 +108,21 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         {/* Video Player Column */}
         <div className="lg:col-span-2 space-y-8">
           <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-2xl shadow-cyan-900/20 group">
-          {/* Video Player — YouTube iframe OR Google Drive via proxy (no public share needed) */}
+            {/* Video Player — YouTube iframe OR Google Drive via proxy (no public share needed) */}
             {youtubeId ? (
-              <iframe 
-                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0`}
-                className="w-full h-full border-0" 
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title={product.name}
-              />
+              <div className="relative w-full h-full">
+                <iframe
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=0&rel=0&modestbranding=1&iv_load_policy=3&showinfo=0`}
+                  className="w-full h-full border-0"
+                  allow="autoplay; encrypted-media"
+                  allowFullScreen
+                  title={product.name}
+                />
+                {/* Gradient phủ trên: che tên video + tên kênh YouTube */}
+                <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none" />
+                {/* Gradient phủ dưới: che logo YouTube watermark */}
+                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+              </div>
             ) : demoId ? (
               <video
                 src={`/api/drive-proxy?id=${demoId}`}
@@ -165,17 +177,17 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   {product.description || `Sở hữu ngay video "${product.name}" chất lượng cao. Video được quay với độ phân giải 4K, tốc độ khung hình 60fps cực kỳ mượt mà, phù hợp cho mọi nhu cầu dựng phim chuyên nghiệp.`}
                 </p>
               </div>
-              
+
               <div className="shrink-0 w-full md:w-auto">
                 {demoId && (
-                <a 
-                  href={`https://drive.google.com/uc?export=download&id=${demoId}`}
-                  target="_blank"
-                  className="flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl shadow-orange-600/20 active:scale-95 w-full"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Tải bản Demo miễn phí
-                </a>
+                  <a
+                    href={`https://drive.google.com/uc?export=download&id=${demoId}`}
+                    target="_blank"
+                    className="flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl shadow-orange-600/20 active:scale-95 w-full"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Tải bản Demo miễn phí
+                  </a>
                 )}
                 <p className="text-[10px] text-slate-500 text-center mt-3 uppercase tracking-widest font-bold">
                   Dung lượng: {product.size || '~50MB'} • {product.driveGocMp4Id && product.driveGocMovId ? 'MP4 & MOV' : (product.driveGocMovId ? 'MOV' : 'MP4')}
@@ -185,47 +197,47 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-slate-900/40 rounded-[2rem] p-6 border border-slate-800/50">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Thông số kỹ thuật</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Độ phân giải</span><span className="text-white font-bold">{product.resolution || '4K Ultra HD'}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Tỷ lệ khung hình</span><span className="text-white font-bold">{product.fps || '60 FPS'}</span></div>
-                  {product.duration && (
-                    <div className="flex justify-between text-sm"><span className="text-slate-500">Thời lượng</span><span className="text-white font-bold">{product.duration}</span></div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Định dạng</span>
-                    <span className="text-white font-bold">
-                      {(() => {
-                        const formats = [];
-                        if (product.driveGocMp4Id) formats.push("MP4");
-                        if (product.driveGocMovId) formats.push("MOV");
-                        return formats.length > 0 ? formats.join(" & ") : "MP4";
-                      })()}
-                    </span>
-                  </div>
+            <div className="bg-slate-900/40 rounded-[2rem] p-6 border border-slate-800/50">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Thông số kỹ thuật</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Độ phân giải</span><span className="text-white font-bold">{product.resolution || '4K Ultra HD'}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Tỷ lệ khung hình</span><span className="text-white font-bold">{product.fps || '60 FPS'}</span></div>
+                {product.duration && (
+                  <div className="flex justify-between text-sm"><span className="text-slate-500">Thời lượng</span><span className="text-white font-bold">{product.duration}</span></div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Định dạng</span>
+                  <span className="text-white font-bold">
+                    {(() => {
+                      const formats = [];
+                      if (product.driveGocMp4Id) formats.push("MP4");
+                      if (product.driveGocMovId) formats.push("MOV");
+                      return formats.length > 0 ? formats.join(" & ") : "MP4";
+                    })()}
+                  </span>
                 </div>
-             </div>
-             <div className="bg-slate-900/40 rounded-[2rem] p-6 border border-slate-800/50">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Bản quyền & Sử dụng</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Giấy phép</span><span className="text-white font-bold">{product.licenseType || 'Standard'}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Sử dụng</span><span className="text-white font-bold">Không giới hạn</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Cấp quyền</span><span className="text-white font-bold">Tự động 24/7</span></div>
-                </div>
-             </div>
+              </div>
+            </div>
+            <div className="bg-slate-900/40 rounded-[2rem] p-6 border border-slate-800/50">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Bản quyền & Sử dụng</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Giấy phép</span><span className="text-white font-bold">{product.licenseType || 'Standard'}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Sử dụng</span><span className="text-white font-bold">Không giới hạn</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Cấp quyền</span><span className="text-white font-bold">Tự động 24/7</span></div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Sticky Checkout Panel */}
         <div className="lg:col-span-1">
           <div className="sticky top-28 bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl shadow-cyan-900/10">
-            <BuyPanel 
-              sku={product.sku} 
+            <BuyPanel
+              sku={product.sku}
               name={product.name}
               thumbnailUrl={product.thumbnailUrl}
-              priceMp4={product.priceMp4} 
-              priceMov={product.priceMov} 
+              priceMp4={product.priceMp4}
+              priceMov={product.priceMov}
               hasMp4={!!product.driveGocMp4Id}
               hasMov={!!product.driveGocMovId}
               originalPriceMp4={product.originalPriceMp4}

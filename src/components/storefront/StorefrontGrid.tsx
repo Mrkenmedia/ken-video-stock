@@ -1,22 +1,117 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import VideoCard from './VideoCard';
 import { Product, Banner } from '@/types';
 import { generateIdFromSku } from '@/lib/utils';
 
+export interface Collection {
+  id: string;
+  title: string;
+  skus: string;
+}
+
 interface StorefrontGridProps {
   products: Product[];
   tags: string[];
   banners?: Banner[];
+  collections?: Collection[];
 }
 
-export default function StorefrontGrid({ products, tags, banners = [] }: StorefrontGridProps) {
+// Sub-component for a single collection row with scroll buttons
+function CollectionCarousel({ collection, collectionProducts }: { collection: any, collectionProducts: Product[] }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const { current } = scrollContainerRef;
+      const scrollAmount = current.clientWidth * 0.8; // scroll 80% of the container width
+      current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <div className="flex items-center justify-between mb-6 px-2">
+        <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-500 tracking-tight drop-shadow-sm">
+          {collection.title}
+        </h2>
+        <div className="h-[2px] flex-grow ml-6 bg-gradient-to-r from-amber-500/20 to-transparent"></div>
+        
+        {/* Navigation Arrows for Desktop */}
+        <div className="hidden md:flex items-center gap-2 ml-6">
+          <button 
+            onClick={() => scroll('left')}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition shadow-lg backdrop-blur-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <button 
+            onClick={() => scroll('right')}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition shadow-lg backdrop-blur-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+      </div>
+      
+      {/* Floating side navigation buttons for when hovering over the row */}
+      <div className="absolute top-1/2 -translate-y-1/2 left-0 -ml-4 z-10 opacity-0 group-hover:opacity-100 transition duration-300 hidden md:block">
+        <button 
+          onClick={() => scroll('left')}
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-slate-700 text-amber-400 hover:text-white hover:bg-amber-600 hover:border-amber-500 transition shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md"
+        >
+          <svg className="w-6 h-6 -ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+        </button>
+      </div>
+      <div className="absolute top-1/2 -translate-y-1/2 right-0 -mr-4 z-10 opacity-0 group-hover:opacity-100 transition duration-300 hidden md:block">
+        <button 
+          onClick={() => scroll('right')}
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-900/90 border border-slate-700 text-amber-400 hover:text-white hover:bg-amber-600 hover:border-amber-500 transition shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md"
+        >
+          <svg className="w-6 h-6 -mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+        </button>
+      </div>
+
+      <div 
+        ref={scrollContainerRef}
+        className="flex gap-6 overflow-x-auto pb-6 pt-2 px-2 snap-x snap-mandatory scrollbar-none"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {collectionProducts.map((product) => (
+          <div key={product.sku} className="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 snap-start">
+            <VideoCard product={product} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function StorefrontGrid({ products, tags, banners = [], collections = [] }: StorefrontGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('stt');
   const [activeSlide, setActiveSlide] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(80);
+
+  // Tính toán chiều cao thực tế của header để ghim (sticky) thanh filter
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const header = document.getElementById('main-header-wrapper');
+      if (header) {
+        setHeaderHeight(header.offsetHeight);
+      }
+    };
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    const timeout = setTimeout(updateHeaderHeight, 500);
+    return () => {
+      window.removeEventListener('resize', updateHeaderHeight);
+      clearTimeout(timeout);
+    };
+  }, []);
 
   // Auto-slide effect for banner carousel
   useEffect(() => {
@@ -134,7 +229,7 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
     <>
       {/* Hero / Banner Carousel Section */}
       {banners && banners.length > 0 ? (
-        <section className="relative w-full h-[500px] md:h-[600px] bg-slate-950 overflow-hidden pt-20">
+        <section className="relative w-full aspect-video min-h-[300px] max-h-[800px] bg-slate-950 overflow-hidden">
           {/* Banner slides */}
           <div className="absolute inset-0 w-full h-full">
             {banners.map((banner, index) => {
@@ -144,7 +239,7 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
               
               return (
                 <div
-                  key={banner.id}
+                  key={`${banner.id}-${index}`}
                   className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
                 >
                   <div className="relative w-full h-full flex items-center justify-center">
@@ -160,17 +255,26 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
                       {banner.mediaType === 'video' ? (
                         youtubeId ? (
                           <iframe
-                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${youtubeId}&modestbranding=1`}
-                            className="w-full h-full object-cover opacity-60 pointer-events-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-                            style={{ width: '150vw', height: '150vh' }} /* Scale up slightly to hide youtube black bars */
+                            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${youtubeId}&modestbranding=1&vq=hd1080&iv_load_policy=3&disablekb=1&fs=0`}
+                            className="absolute pointer-events-none"
+                            style={{
+                              top: '50%',
+                              left: '50%',
+                              width: '177.78vh',
+                              minWidth: '100%',
+                              height: '56.25vw',
+                              minHeight: '100%',
+                              transform: 'translate(-50%, -50%) scale(1.05)',
+                              opacity: banner.opacity !== undefined ? banner.opacity / 100 : 0.6,
+                            }}
                             allow="autoplay; encrypted-media"
-                            allowFullScreen
-                            title={banner.title || 'YouTube Video'}
+                            title={banner.title || 'Banner'}
                           />
                         ) : (
                           <video
                             src={mediaSrc}
-                            className="w-full h-full object-cover opacity-60"
+                            className="w-full h-full object-cover"
+                            style={{ opacity: banner.opacity !== undefined ? banner.opacity / 100 : 0.6 }}
                             autoPlay
                             muted
                             loop
@@ -181,7 +285,8 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
                         <img
                           src={mediaSrc}
                           alt={banner.title || ''}
-                          className="w-full h-full object-cover opacity-60"
+                          className="w-full h-full object-cover"
+                          style={{ opacity: banner.opacity !== undefined ? banner.opacity / 100 : 0.6 }}
                         />
                       )}
                       {/* Shadow overlay gradient - lighter for better visibility */}
@@ -273,14 +378,17 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
       )}
 
       {/* Filter / Tabs & Search Bar */}
-      <section className="border-y border-slate-800/60 bg-slate-950/50 sticky top-20 z-40 backdrop-blur-md">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4">
+      <section 
+        className="border-y border-slate-800/60 bg-slate-950/95 sticky z-40 backdrop-blur-xl shadow-lg transition-all duration-300"
+        style={{ top: `${headerHeight}px` }}
+      >
+        <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 py-3 md:py-4">
           
           {/* Tags list (scrollable horizontally) */}
-          <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide flex-1 w-full md:w-auto pr-4">
+          <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide flex-1 w-full md:w-auto -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
             <button 
               onClick={() => setSelectedTag(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-colors ${!selectedTag ? 'bg-slate-800 text-white border-slate-700' : 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800'}`}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap border transition-all ${!selectedTag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
             >
               Tất cả
             </button>
@@ -288,7 +396,7 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
               <button 
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border transition-colors ${selectedTag === tag ? 'bg-slate-800 text-white border-slate-700' : 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800'}`}
+                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap border transition-all ${selectedTag === tag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
               >
                 {tag}
               </button>
@@ -317,9 +425,30 @@ export default function StorefrontGrid({ products, tags, banners = [] }: Storefr
 
       {/* Product Grid */}
       <section className="container mx-auto px-6 py-12 min-h-[500px]">
+        {/* Render Collections if no search/filter is active */}
+        {!searchQuery && !selectedTag && collections && collections.length > 0 && (
+          <div className="mb-16 space-y-12">
+            {collections.map(collection => {
+              const skuList = collection.skus.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+              // Lấy ra các sản phẩm thuộc collection này, xếp theo đúng thứ tự SKU nhập vào
+              const collectionProducts = skuList.map(sku => products.find(p => p.sku.toLowerCase() === sku)).filter(Boolean) as Product[];
+              
+              if (collectionProducts.length === 0) return null;
+
+              return (
+                <CollectionCarousel 
+                  key={collection.id} 
+                  collection={collection} 
+                  collectionProducts={collectionProducts} 
+                />
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h2 className="text-2xl font-bold text-white">
-            {searchQuery ? 'Kết quả tìm kiếm' : (selectedTag ? `Thể loại: ${selectedTag}` : 'Video Mới Nhất')}
+            {searchQuery ? 'Kết quả tìm kiếm' : (selectedTag ? `Thể loại: ${selectedTag}` : 'Tất cả Video (Mới Nhất)')}
           </h2>
           <div className="flex items-center gap-4 self-end sm:self-auto">
             <span className="text-sm text-slate-400 hidden md:inline">Hiển thị {filteredProducts.length} kết quả</span>

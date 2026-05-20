@@ -1,0 +1,284 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
+export default function PromotionsPage() {
+  const [loading, setLoading] = useState(true);
+  
+  const [globalDiscountPercent, setGlobalDiscountPercent] = useState('0');
+  const [globalDiscountStart, setGlobalDiscountStart] = useState('');
+  const [globalDiscountEnd, setGlobalDiscountEnd] = useState('');
+  const [newUserFlashSalePercent, setNewUserFlashSalePercent] = useState('0');
+  const [newUserFlashSaleDuration, setNewUserFlashSaleDuration] = useState('0');
+  
+  const [promoTitle, setPromoTitle] = useState('🔥 KHUYẾN MÃI TOÀN SÀN 🔥');
+  const [promoSubtitle, setPromoSubtitle] = useState('Giảm tới {discount}% — Kho video chất lượng 4K');
+  const [promoColorFrom, setPromoColorFrom] = useState('#f97316');
+  const [promoColorTo, setPromoColorTo] = useState('#e11d48');
+  const [promoTextColor, setPromoTextColor] = useState('#ffffff');
+  const [promoCtaLabel, setPromoCtaLabel] = useState('Mua ngay ➔');
+  const [promoCtaBg, setPromoCtaBg] = useState('#ffffff');
+  const [promoCtaText, setPromoCtaText] = useState('#c026d3');
+
+  const [savingDiscount, setSavingDiscount] = useState(false);
+  const [discountMessage, setDiscountMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        
+        setGlobalDiscountPercent(data.globalDiscountPercent || '0');
+        setGlobalDiscountStart(data.globalDiscountStart || '');
+        setGlobalDiscountEnd(data.globalDiscountEnd || '');
+        setNewUserFlashSalePercent(data.newUserFlashSalePercent || '0');
+        setNewUserFlashSaleDuration(data.newUserFlashSaleDuration || '0');
+        
+        if (data.promoTitle) setPromoTitle(data.promoTitle);
+        if (data.promoSubtitle) setPromoSubtitle(data.promoSubtitle);
+        if (data.promoColorFrom) setPromoColorFrom(data.promoColorFrom);
+        if (data.promoColorTo) setPromoColorTo(data.promoColorTo);
+        if (data.promoTextColor) setPromoTextColor(data.promoTextColor);
+        if (data.promoCtaLabel) setPromoCtaLabel(data.promoCtaLabel);
+        if (data.promoCtaBg) setPromoCtaBg(data.promoCtaBg);
+        if (data.promoCtaText) setPromoCtaText(data.promoCtaText);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  const handleSaveDiscount = async () => {
+    setSavingDiscount(true);
+    setDiscountMessage({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            globalDiscountPercent,
+            globalDiscountStart,
+            globalDiscountEnd,
+            newUserFlashSalePercent,
+            newUserFlashSaleDuration,
+            promoTitle,
+            promoSubtitle,
+            promoColorFrom,
+            promoColorTo,
+            promoTextColor,
+            promoCtaLabel,
+            promoCtaBg,
+            promoCtaText,
+          }
+        }),
+      });
+      if (res.ok) {
+        setDiscountMessage({ type: 'success', text: 'Đã lưu cấu hình Khuyến mãi & Flash Sale thành công.' });
+      } else {
+        setDiscountMessage({ type: 'error', text: 'Lỗi khi lưu cấu hình.' });
+      }
+    } catch (error) {
+      setDiscountMessage({ type: 'error', text: 'Không kết nối được server.' });
+    } finally {
+      setSavingDiscount(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8">Đang tải...</div>;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto pb-20">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Quản lý Khuyến Mãi</h1>
+      
+      {/* Global Discount Settings */}
+      <div className="bg-white shadow rounded-lg p-6 mb-8 border border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5a2 2 0 10-2 2h2zm0 0h4m-4 0H8m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Chương trình Khuyến mãi Toàn sàn (Giảm giá toàn bộ Video)
+        </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Thiết lập mức giảm giá phần trăm (%) áp dụng tự động cho toàn bộ sản phẩm trên trang bán hàng. Bạn có thể cài đặt chính xác khung thời gian bắt đầu và kết thúc (theo giờ, ngày).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Mức giảm giá (%)</label>
+            <div className="relative rounded-md shadow-sm">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={globalDiscountPercent}
+                onChange={(e) => setGlobalDiscountPercent(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+                placeholder="Ví dụ: 20"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">%</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Để 0 nếu muốn tắt chương trình giảm giá.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian bắt đầu</label>
+            <input
+              type="datetime-local"
+              value={globalDiscountStart}
+              onChange={(e) => setGlobalDiscountStart(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+            />
+            <p className="text-xs text-gray-500 mt-1">Bỏ trống để áp dụng ngay lập tức.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian kết thúc</label>
+            <input
+              type="datetime-local"
+              value={globalDiscountEnd}
+              onChange={(e) => setGlobalDiscountEnd(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+            />
+            <p className="text-xs text-gray-500 mt-1">Bỏ trống để chạy vô thời hạn.</p>
+          </div>
+        </div>
+
+        {/* ─── Tùy chỉnh Giao diện Banner Top ─── */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Nội dung & Màu sắc Banner Top (Hiển thị khi giảm giá &gt; 0)</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu đề Banner</label>
+              <input
+                type="text"
+                value={promoTitle}
+                onChange={(e) => setPromoTitle(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mô tả phụ (dùng {'{discount}'} để chèn % tự động)</label>
+              <input
+                type="text"
+                value={promoSubtitle}
+                onChange={(e) => setPromoSubtitle(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Label Nút bấm (CTA)</label>
+              <input
+                type="text"
+                value={promoCtaLabel}
+                onChange={(e) => setPromoCtaLabel(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Màu nền 1 (From)</label>
+              <input type="color" value={promoColorFrom} onChange={(e) => setPromoColorFrom(e.target.value)} className="w-full h-10 rounded border-gray-300 cursor-pointer" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Màu nền 2 (To)</label>
+              <input type="color" value={promoColorTo} onChange={(e) => setPromoColorTo(e.target.value)} className="w-full h-10 rounded border-gray-300 cursor-pointer" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Màu chữ Banner</label>
+              <input type="color" value={promoTextColor} onChange={(e) => setPromoTextColor(e.target.value)} className="w-full h-10 rounded border-gray-300 cursor-pointer" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Màu nền Nút CTA</label>
+              <input type="color" value={promoCtaBg} onChange={(e) => setPromoCtaBg(e.target.value)} className="w-full h-10 rounded border-gray-300 cursor-pointer" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Màu chữ Nút CTA</label>
+              <input type="color" value={promoCtaText} onChange={(e) => setPromoCtaText(e.target.value)} className="w-full h-10 rounded border-gray-300 cursor-pointer" />
+            </div>
+          </div>
+          
+          <div className="p-4 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden relative">
+             <div style={{ background: `linear-gradient(135deg, ${promoColorFrom}, ${promoColorTo})`, color: promoTextColor }} className="w-full py-2 px-4 rounded shadow-md flex items-center justify-between text-sm font-bold">
+               <span>{promoTitle} <span className="opacity-90 font-medium ml-2">{promoSubtitle.replace('{discount}', globalDiscountPercent)}</span></span>
+               <span style={{ background: promoCtaBg, color: promoCtaText }} className="px-3 py-1 rounded-full shadow-sm">{promoCtaLabel}</span>
+             </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <hr className="border-gray-200 my-6" />
+
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          Chương trình Flash Sale Người dùng mới (New User Flash Sale)
+        </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Kích hoạt giảm giá hấp dẫn có thời hạn (Countdown Timer) khi khách hàng mới truy cập website lần đầu tiên, thôi thúc họ đặt hàng nhanh chóng.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Mức giảm giá Flash Sale (%)</label>
+            <div className="relative rounded-md shadow-sm">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={newUserFlashSalePercent}
+                onChange={(e) => setNewUserFlashSalePercent(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+                placeholder="Ví dụ: 25"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">%</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Để 0 nếu muốn tắt chương trình Flash Sale người dùng mới.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Thời lượng Flash Sale (Phút)</label>
+            <div className="relative rounded-md shadow-sm">
+              <input
+                type="number"
+                min="1"
+                value={newUserFlashSaleDuration}
+                onChange={(e) => setNewUserFlashSaleDuration(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
+                placeholder="Ví dụ: 30"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">phút</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Khoảng thời gian đếm ngược (phút) chạy cho mỗi khách hàng mới.</p>
+          </div>
+        </div>
+
+        {discountMessage.text && (
+          <div className={`p-3 rounded-md mb-6 text-sm font-medium ${discountMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {discountMessage.text}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveDiscount}
+          disabled={savingDiscount}
+          className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2 mb-4"
+        >
+          {savingDiscount ? 'Đang lưu...' : 'Lưu cấu hình Khuyến mãi'}
+        </button>
+      </div>
+    </div>
+  );
+}

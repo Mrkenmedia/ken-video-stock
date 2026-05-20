@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 
 export default function CartDrawer() {
-  const { isCartOpen, setIsCartOpen, effectiveItems, removeFromCart, finalTotal, tierDiscountPercent, effectiveTotal } = useCart();
+  const { isCartOpen, setIsCartOpen, effectiveItems, removeFromCart, finalTotal, tierDiscountPercent, effectiveTotal, cartTotal } = useCart();
 
   // Prevent scroll when open
   useEffect(() => {
@@ -84,13 +84,26 @@ export default function CartDrawer() {
         
         {effectiveItems.length > 0 && (
           <div className="p-6 border-t bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-            {tierDiscountPercent > 0 && (
-              <div className="flex justify-between text-sm text-green-600 mb-2">
-                <span>Ưu đãi mua nhiều (-{tierDiscountPercent}%)</span>
-                <span>-{(effectiveTotal - finalTotal).toLocaleString('vi-VN')} đ</span>
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>Tạm tính:</span>
+                <span>{(cartTotal).toLocaleString('vi-VN')} đ</span>
               </div>
-            )}
-            <div className="flex justify-between items-center mb-6">
+              {cartTotal > effectiveTotal && (
+                <div className="flex justify-between text-sm text-amber-500 font-medium">
+                  <span>⚡ Ưu đãi Flash Sale:</span>
+                  <span>-{(cartTotal - effectiveTotal).toLocaleString('vi-VN')} đ</span>
+                </div>
+              )}
+              {tierDiscountPercent > 0 && (
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span>📦 Ưu đãi mua nhiều (-{tierDiscountPercent}%):</span>
+                  <span>-{(effectiveTotal - finalTotal).toLocaleString('vi-VN')} đ</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-between items-center mb-6 pt-3 border-t border-slate-100">
               <span className="font-bold text-xl text-slate-800">Tổng phụ:</span>
               <span className="font-extrabold text-2xl text-slate-900">{finalTotal.toLocaleString('vi-VN')} đ</span>
             </div>

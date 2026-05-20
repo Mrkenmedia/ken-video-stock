@@ -14,6 +14,7 @@ export async function submitNewProduct(formData: FormData) {
   let driveGocMp4Id = formData.get('driveGocMp4Id') as string || '';
   let driveGocMovId = formData.get('driveGocMovId') as string || '';
   let driveDemoId = formData.get('driveDemoId') as string || '';
+  let youtubeDemoUrl = formData.get('youtubeDemoUrl') as string || '';
 
   const videoFile = formData.get('videoFile') as File | null;
   const demoFile = formData.get('demoFile') as File | null;
@@ -36,16 +37,16 @@ export async function submitNewProduct(formData: FormData) {
     const driveId = await uploadToDrive(demoFile, folder);
     driveDemoId = driveId;
 
-    if (uploadToYT) {
-      try {
-        const ytId = await uploadToYouTube(demoFile, formData.get('name') as string, formData.get('description') as string);
-        if (ytId) {
-          driveDemoId = `https://youtu.be/${ytId}`;
+      if (uploadToYT) {
+        try {
+          const ytId = await uploadToYouTube(demoFile, formData.get('name') as string, formData.get('description') as string);
+          if (ytId) {
+            youtubeDemoUrl = `https://youtu.be/${ytId}`;
+          }
+        } catch (e) {
+          console.error('Failed to upload demo to YouTube', e);
         }
-      } catch (e) {
-        console.error('Failed to upload demo to YouTube', e);
       }
-    }
   }
 
   const productData = {
@@ -54,6 +55,7 @@ export async function submitNewProduct(formData: FormData) {
     tags: tags,
     thumbnailUrl: formData.get('thumbnailUrl') as string,
     driveDemoId,
+    youtubeDemoUrl,
     driveGocMp4Id,
     priceMp4: parseFloat(formData.get('priceMp4') as string) || 0,
     driveGocMovId,
@@ -90,6 +92,7 @@ export async function editProduct(formData: FormData) {
   let driveGocMp4Id = formData.get('driveGocMp4Id') as string || '';
   let driveGocMovId = formData.get('driveGocMovId') as string || '';
   let driveDemoId = formData.get('driveDemoId') as string || '';
+  let youtubeDemoUrl = formData.get('youtubeDemoUrl') as string || '';
 
   const videoFile = formData.get('videoFile') as File | null;
   const demoFile = formData.get('demoFile') as File | null;
@@ -112,16 +115,16 @@ export async function editProduct(formData: FormData) {
     const driveId = await uploadToDrive(demoFile, folder);
     driveDemoId = driveId;
 
-    if (uploadToYT) {
-      try {
-        const ytId = await uploadToYouTube(demoFile, formData.get('name') as string, formData.get('description') as string);
-        if (ytId) {
-          driveDemoId = `https://youtu.be/${ytId}`;
+      if (uploadToYT) {
+        try {
+          const ytId = await uploadToYouTube(demoFile, formData.get('name') as string, formData.get('description') as string);
+          if (ytId) {
+            youtubeDemoUrl = `https://youtu.be/${ytId}`;
+          }
+        } catch (e) {
+          console.error('Failed to upload demo to YouTube', e);
         }
-      } catch (e) {
-        console.error('Failed to upload demo to YouTube', e);
       }
-    }
   }
 
   const { updateProduct } = await import('@/lib/google');
@@ -131,6 +134,7 @@ export async function editProduct(formData: FormData) {
     tags: tags,
     thumbnailUrl: formData.get('thumbnailUrl') as string,
     driveDemoId,
+    youtubeDemoUrl,
     driveGocMp4Id,
     priceMp4: parseFloat(formData.get('priceMp4') as string) || 0,
     driveGocMovId,
@@ -166,5 +170,22 @@ export async function deleteProductAction(sku: string) {
     return { success: true };
   } else {
     return { success: false, message: 'Failed to delete product' };
+  }
+}
+
+export async function deleteAllProductsAction(password: string) {
+  if (password !== process.env.ADMIN_PASSWORD) {
+    return { success: false, message: 'Mật khẩu quản trị không chính xác' };
+  }
+  
+  const { deleteAllProducts } = await import('@/lib/google');
+  const success = await deleteAllProducts();
+  
+  if (success) {
+    revalidatePath('/admin/products');
+    revalidatePath('/');
+    return { success: true };
+  } else {
+    return { success: false, message: 'Xóa thất bại. Vui lòng thử lại' };
   }
 }

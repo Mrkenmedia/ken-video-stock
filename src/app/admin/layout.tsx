@@ -11,7 +11,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex-shrink-0">
+      <aside className="w-64 bg-gray-900 text-white flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
         <div className="p-6 flex items-center gap-2">
           <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-700 flex-shrink-0 bg-slate-900">
             <img 
@@ -43,8 +43,14 @@ export default function AdminLayout({
           <Link href="/admin/banners" className={linkClass}>
             Quản lý Banner (Carousel)
           </Link>
+          <Link href="/admin/collections" className={linkClass}>
+            Quản lý Bộ Sưu Tập
+          </Link>
+          <Link href="/admin/promotions" className={linkClass}>
+            Khuyến Mãi & Banner
+          </Link>
           <Link href="/admin/settings" className={linkClass}>
-            Cài đặt &amp; Khuyến Mãi
+            Cài đặt Hệ thống
           </Link>
         </nav>
       </aside>

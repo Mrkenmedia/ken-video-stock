@@ -299,19 +299,29 @@ function CheckoutContent() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Tạm tính ({items.length} file)</span>
-                  <span className="text-white">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(displaySubtotal)}</span>
+                  <span className="text-white font-medium">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
                 </div>
                 
+                {/* Flash Sale Discount */}
+                {!isExclusive && cartTotal > effectiveTotal && (
+                  <div className="flex justify-between text-sm text-amber-400 font-medium">
+                    <span>⚡ Ưu đãi Flash Sale</span>
+                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal - effectiveTotal)}</span>
+                  </div>
+                )}
+
+                {/* Tier Discount */}
                 {!isExclusive && tierDiscountPercent > 0 && (
-                  <div className="flex justify-between text-sm text-green-400">
-                    <span>Ưu đãi mua nhiều (-{tierDiscountPercent}%)</span>
+                  <div className="flex justify-between text-sm text-green-400 font-medium">
+                    <span>📦 Ưu đãi mua nhiều (-{tierDiscountPercent}%)</span>
                     <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(effectiveTotal - cartFinalTotal)}</span>
                   </div>
                 )}
 
+                {/* Coupon Discount */}
                 {appliedCoupon && (
-                  <div className="flex justify-between text-sm text-green-400">
-                    <span>Mã giảm giá ({appliedCoupon}) {isExclusive ? '(Độc quyền)' : ''}</span>
+                  <div className="flex justify-between text-sm text-cyan-400 font-medium">
+                    <span>🎫 Mã giảm giá ({appliedCoupon}) {isExclusive ? '(Độc quyền, vô hiệu hóa ưu đãi khác)' : ''}</span>
                     <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}</span>
                   </div>
                 )}

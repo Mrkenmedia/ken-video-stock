@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Product } from '@/types';
 import DeleteButton from './DeleteButton';
-import { editProduct } from './actions';
+import { editProduct, deleteAllProductsAction } from './actions';
 import SubmitButton from './SubmitButton';
 import { generateIdFromSku } from '@/lib/utils';
 
@@ -18,6 +18,64 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
+  // Xóa toàn bộ
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    
+    video.onloadedmetadata = function() {
+      URL.revokeObjectURL(video.src);
+      
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      let resText = w + 'x' + h;
+      if (w >= 3840 || h >= 2160 || w === 2160) resText = '4K Ultra HD';
+      else if (w >= 2560 || h >= 1440) resText = '2K QHD';
+      else if (w >= 1920 || h >= 1080) resText = '1080p Full HD';
+      else if (w >= 1280 || h >= 720) resText = '720p HD';
+      
+      const resInput = document.querySelector('input[name="resolution"]') as HTMLInputElement;
+      if (resInput) resInput.value = resText;
+      
+      if (video.duration) {
+        const totalSeconds = Math.round(video.duration);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        const durInput = document.querySelector('input[name="duration"]') as HTMLInputElement;
+        if (durInput) durInput.value = mins + ':' + (secs < 10 ? '0' : '') + secs;
+      }
+    };
+    
+    video.src = URL.createObjectURL(file);
+  };
+
+  const handleDeleteAll = async () => {
+    setDeleteError('');
+    setIsDeletingAll(true);
+    try {
+      const res = await deleteAllProductsAction(deletePassword);
+      if (res.success) {
+        setShowDeleteAllModal(false);
+        setDeletePassword('');
+        setSearchQuery('');
+        setCurrentPage(1);
+      } else {
+        setDeleteError(res.message || 'Lỗi không xác định');
+      }
+    } catch (e) {
+      setDeleteError('Có lỗi xảy ra khi xóa');
+    }
+    setIsDeletingAll(false);
+  };
 
   // Filter products by SKU, Name, Tags, or Auto-generated ID
   const filteredProducts = initialProducts.filter((product) => {
@@ -69,6 +127,13 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             Thêm 1 Video
           </a>
+          <button 
+            onClick={() => setShowDeleteAllModal(true)}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md shadow-sm transition font-medium text-sm flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            Xóa toàn bộ
+          </button>
         </div>
       </div>
 
@@ -101,28 +166,53 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
           )}
         </div>
 
-        {/* Tab Buttons */}
+        {/* Phân trang (Pagination) */}
         {totalPages > 1 && (
-          <div className="flex flex-wrap gap-2 p-1.5 bg-gray-50 border border-gray-200 rounded-xl max-w-full overflow-x-auto">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-2 bg-white border border-gray-200 rounded-xl shadow-sm max-w-full overflow-x-auto">
+            {/* Nút Previous */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm transition-all ${
+                currentPage === 1 
+                  ? 'text-gray-300 cursor-not-allowed' 
+                  : 'text-gray-600 hover:bg-teal-50 hover:text-teal-600'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+
+            {/* Các số trang */}
             {Array.from({ length: totalPages }, (_, i) => {
               const pageNum = i + 1;
-              const start = i * itemsPerPage + 1;
-              const end = Math.min((i + 1) * itemsPerPage, filteredProducts.length);
               const isActive = currentPage === pageNum;
               return (
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm transition-all ${
                     isActive
-                      ? 'bg-teal-600 text-white shadow-md shadow-teal-600/10'
+                      ? 'bg-teal-600 text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
-                  Tab {pageNum} ({start} - {end})
+                  {pageNum}
                 </button>
               );
             })}
+
+            {/* Nút Next */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className={`flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm transition-all ${
+                currentPage === totalPages 
+                  ? 'text-gray-300 cursor-not-allowed' 
+                  : 'text-gray-600 hover:bg-teal-50 hover:text-teal-600'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </button>
           </div>
         )}
       </div>
@@ -257,8 +347,8 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
                 <h3 className="text-base font-bold text-gray-800 border-b pb-1.5">1. Thông tin cơ bản</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tên Video *</label>
-                    <input required type="text" name="name" defaultValue={editingProduct.name} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white text-sm" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mã SKU * (Không thể sửa)</label>
+                    <input required type="text" name="sku" defaultValue={editingProduct.sku} readOnly className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-gray-100 cursor-not-allowed text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Mã ID</label>
@@ -267,6 +357,10 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Số thứ tự (STT)</label>
                     <input type="number" name="stt" defaultValue={editingProduct.stt || ""} placeholder="VD: 1, 2, 3" min="1" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white text-sm" />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tên Video *</label>
+                    <input required type="text" name="name" defaultValue={editingProduct.name} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white text-sm" />
                   </div>
                   <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Từ khóa (Tags)</label>
@@ -331,9 +425,39 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
                     <label className="block text-sm font-medium text-gray-700 mb-1">URL Ảnh Thumbnail (Tùy chọn - Bỏ trống để tự động lấy ảnh từ video Google Drive)</label>
                     <input type="url" name="thumbnailUrl" defaultValue={editingProduct.thumbnailUrl} placeholder="https://..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white text-sm" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Google Drive ID - Video Demo *</label>
-                    <input required type="text" name="driveDemoId" defaultValue={editingProduct.driveDemoId} placeholder="VD: 1Bxy..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+
+                  <div className="bg-teal-50/50 p-4 rounded-xl border border-teal-100 space-y-4">
+                    <h4 className="font-semibold text-teal-800">Tự động Tải lên (Tùy chọn)</h4>
+                    <p className="text-xs text-teal-600 mb-2">Chọn file để ghi đè video hiện tại bằng cách tải lên Google Drive và YouTube tự động.</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cập nhật File Gốc (MP4/MOV)</label>
+                        <input type="file" name="videoFile" accept=".mp4,.mov" onChange={handleFileChange} className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cập nhật Video Demo (MP4)</label>
+                        <input type="file" name="demoFile" accept=".mp4" onChange={handleFileChange} className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
+                        
+                        <div className="mt-2.5 flex items-center">
+                          <input type="checkbox" id="uploadToYouTubeEditModal" name="uploadToYouTube" className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded" />
+                          <label htmlFor="uploadToYouTubeEditModal" className="ml-2 block text-xs text-gray-900">
+                            Đồng thời đăng Demo mới lên YouTube
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Drive ID - Tải file Demo miễn phí</label>
+                      <input type="text" name="driveDemoId" defaultValue={editingProduct.driveDemoId} placeholder="VD: 1Bxy..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">YouTube URL - Xem trước Demo (Khuyên dùng)</label>
+                      <input type="text" name="youtubeDemoUrl" defaultValue={editingProduct.youtubeDemoUrl || ''} placeholder="https://youtu.be/..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 font-mono text-sm text-gray-900 bg-white" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -403,6 +527,73 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
                 <SubmitButton pendingText="Đang lưu..." text="Lưu thay đổi" />
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/55 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-100 max-w-md w-full p-6 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Xóa TOÀN BỘ sản phẩm?</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Bạn đang yêu cầu xóa toàn bộ kho video. 
+              <strong> Hành động này không thể hoàn tác!</strong> Vui lòng nhập mật khẩu quản trị để xác nhận.
+            </p>
+
+            {deleteError && (
+              <div className="mb-4 text-sm text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mb-6 text-left">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu Admin *</label>
+              <input 
+                type="password" 
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Nhập mật khẩu..." 
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteAllModal(false);
+                  setDeletePassword('');
+                  setDeleteError('');
+                }}
+                disabled={isDeletingAll}
+                className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAll}
+                disabled={!deletePassword || isDeletingAll}
+                className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition flex items-center justify-center min-w-[120px] ${
+                  !deletePassword || isDeletingAll ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {isDeletingAll ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Đang xóa...
+                  </>
+                ) : 'Xác nhận xóa'}
+              </button>
+            </div>
           </div>
         </div>
       )}

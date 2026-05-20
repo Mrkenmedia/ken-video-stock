@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getBanners, addBanner, updateBanner, deleteBanner } from '@/lib/google';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, subtitle, mediaType, mediaUrl, linkUrl, order, status } = body;
+    const { title, subtitle, mediaType, mediaUrl, linkUrl, order, status, opacity } = body;
 
     if (!mediaType || !mediaUrl) {
       return NextResponse.json({ error: 'MediaType and MediaUrl are required' }, { status: 400 });
@@ -34,9 +35,11 @@ export async function POST(request: Request) {
       linkUrl,
       order: parseInt(order) || 0,
       status: status || 'active',
+      opacity: opacity !== undefined ? parseInt(opacity) : 60,
     });
 
     if (success) {
+      revalidatePath('/');
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: 'Failed to add banner' }, { status: 500 });
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, title, subtitle, mediaType, mediaUrl, linkUrl, order, status } = body;
+    const { id, title, subtitle, mediaType, mediaUrl, linkUrl, order, status, opacity } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Banner ID is required' }, { status: 400 });
@@ -63,9 +66,11 @@ export async function PUT(request: Request) {
       linkUrl,
       order: order !== undefined ? parseInt(order) || 0 : undefined,
       status: status,
+      opacity: opacity !== undefined ? parseInt(opacity) : 60,
     });
 
     if (success) {
+      revalidatePath('/');
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: 'Failed to update banner or banner not found' }, { status: 404 });
@@ -87,6 +92,7 @@ export async function DELETE(request: Request) {
     const success = await deleteBanner(id);
 
     if (success) {
+      revalidatePath('/');
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: 'Failed to delete banner or banner not found' }, { status: 404 });

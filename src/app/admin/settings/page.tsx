@@ -17,13 +17,19 @@ export default function SettingsPage() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [instructionsMessage, setInstructionsMessage] = useState({ type: '', text: '' });
 
-  const [globalDiscountPercent, setGlobalDiscountPercent] = useState('0');
-  const [globalDiscountStart, setGlobalDiscountStart] = useState('');
-  const [globalDiscountEnd, setGlobalDiscountEnd] = useState('');
-  const [newUserFlashSalePercent, setNewUserFlashSalePercent] = useState('0');
-  const [newUserFlashSaleDuration, setNewUserFlashSaleDuration] = useState('0');
-  const [savingDiscount, setSavingDiscount] = useState(false);
-  const [discountMessage, setDiscountMessage] = useState({ type: '', text: '' });
+  // ─ Màu nút Chi tiết ──────────────────────────────────────────────────────
+  const [detailButtonColor, setDetailButtonColor] = useState('#6366f1');
+  const [detailButtonTextColor, setDetailButtonTextColor] = useState('#ffffff');
+  const [savingBtnColor, setSavingBtnColor] = useState(false);
+  const [btnColorMessage, setBtnColorMessage] = useState({ type: '', text: '' });
+  // ───────────────────────────────────────────────────────────────
+
+  // ─ Footer Text ─────────────────────────────────────────────────────────────
+  const [footerCopyright, setFooterCopyright] = useState(`© ${new Date().getFullYear()} MrKen Media. All rights reserved.`);
+  const [footerSubtext, setFooterSubtext] = useState('Tối ưu hóa bởi Google Drive & Next.js');
+  const [savingFooter, setSavingFooter] = useState(false);
+  const [footerMessage, setFooterMessage] = useState({ type: '', text: '' });
+  // ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
     async function loadSettings() {
@@ -31,11 +37,11 @@ export default function SettingsPage() {
         const res = await fetch('/api/settings');
         const data = await res.json();
         
-        setGlobalDiscountPercent(data.globalDiscountPercent || '0');
-        setGlobalDiscountStart(data.globalDiscountStart || '');
-        setGlobalDiscountEnd(data.globalDiscountEnd || '');
-        setNewUserFlashSalePercent(data.newUserFlashSalePercent || '0');
-        setNewUserFlashSaleDuration(data.newUserFlashSaleDuration || '0');
+        if (data.detailButtonColor) setDetailButtonColor(data.detailButtonColor);
+        if (data.detailButtonTextColor) setDetailButtonTextColor(data.detailButtonTextColor);
+        if (data.footerCopyright) setFooterCopyright(data.footerCopyright);
+        if (data.footerSubtext) setFooterSubtext(data.footerSubtext);
+
         setPaymentInstructions(data.paymentInstructions || `<div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 100%; margin: 15px auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 25px; color: #e2e8f0; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
   
   <!-- Cảnh báo quan trọng -->
@@ -186,36 +192,51 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveDiscount = async () => {
-    setSavingDiscount(true);
-    setDiscountMessage({ type: '', text: '' });
+  const handleSaveBtnColor = async () => {
+    setSavingBtnColor(true);
+    setBtnColorMessage({ type: '', text: '' });
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          settings: {
-            globalDiscountPercent,
-            globalDiscountStart,
-            globalDiscountEnd,
-            newUserFlashSalePercent,
-            newUserFlashSaleDuration,
-          }
+          settings: { detailButtonColor, detailButtonTextColor },
         }),
       });
       if (res.ok) {
-        setDiscountMessage({ type: 'success', text: 'Đã lưu cấu hình Khuyến mãi & Flash Sale thành công.' });
+        setBtnColorMessage({ type: 'success', text: 'Đã lưu màu nút Chi tiết thành công. Reload trang storefront để thấy hiệu ứng.' });
       } else {
-        setDiscountMessage({ type: 'error', text: 'Lỗi khi lưu cấu hình.' });
+        setBtnColorMessage({ type: 'error', text: 'Lỗi khi lưu.' });
       }
-    } catch (error) {
-      setDiscountMessage({ type: 'error', text: 'Không kết nối được server.' });
+    } catch {
+      setBtnColorMessage({ type: 'error', text: 'Không kết nối được server.' });
     } finally {
-      setSavingDiscount(false);
+      setSavingBtnColor(false);
     }
   };
 
-
+  const handleSaveFooter = async () => {
+    setSavingFooter(true);
+    setFooterMessage({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: { footerCopyright, footerSubtext },
+        }),
+      });
+      if (res.ok) {
+        setFooterMessage({ type: 'success', text: 'Đã lưu nội dung Footer thành công. Reload trang chủ để thấy thay đổi.' });
+      } else {
+        setFooterMessage({ type: 'error', text: 'Lỗi khi lưu.' });
+      }
+    } catch {
+      setFooterMessage({ type: 'error', text: 'Không kết nối được server.' });
+    } finally {
+      setSavingFooter(false);
+    }
+  };
 
   if (loading) {
     return <div className="p-8">Đang tải...</div>;
@@ -224,124 +245,6 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto pb-20">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Cài đặt Hệ thống</h1>
-      
-      {/* Global Discount Settings */}
-      <div className="bg-white shadow rounded-lg p-6 mb-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
-          <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5a2 2 0 10-2 2h2zm0 0h4m-4 0H8m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          Chương trình Khuyến mãi Toàn sàn (Giảm giá toàn bộ Video)
-        </h2>
-        <p className="text-sm text-gray-600 mb-6">
-          Thiết lập mức giảm giá phần trăm (%) áp dụng tự động cho toàn bộ sản phẩm trên trang bán hàng. Bạn có thể cài đặt chính xác khung thời gian bắt đầu và kết thúc (theo giờ, ngày).
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mức giảm giá (%)</label>
-            <div className="relative rounded-md shadow-sm">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={globalDiscountPercent}
-                onChange={(e) => setGlobalDiscountPercent(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
-                placeholder="Ví dụ: 20"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 sm:text-sm">%</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Để 0 nếu muốn tắt chương trình giảm giá.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian bắt đầu</label>
-            <input
-              type="datetime-local"
-              value={globalDiscountStart}
-              onChange={(e) => setGlobalDiscountStart(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
-            />
-            <p className="text-xs text-gray-500 mt-1">Bỏ trống để áp dụng ngay lập tức.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Thời gian kết thúc</label>
-            <input
-              type="datetime-local"
-              value={globalDiscountEnd}
-              onChange={(e) => setGlobalDiscountEnd(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
-            />
-            <p className="text-xs text-gray-500 mt-1">Bỏ trống để chạy vô thời hạn.</p>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <hr className="border-gray-200 my-6" />
-
-        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
-          <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-          Chương trình Flash Sale Người dùng mới (New User Flash Sale)
-        </h2>
-        <p className="text-sm text-gray-600 mb-6">
-          Kích hoạt giảm giá hấp dẫn có thời hạn (Countdown Timer) khi khách hàng mới truy cập website lần đầu tiên, thôi thúc họ đặt hàng nhanh chóng.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mức giảm giá Flash Sale (%)</label>
-            <div className="relative rounded-md shadow-sm">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={newUserFlashSalePercent}
-                onChange={(e) => setNewUserFlashSalePercent(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
-                placeholder="Ví dụ: 25"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 sm:text-sm">%</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Để 0 nếu muốn tắt chương trình Flash Sale người dùng mới.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Thời lượng Flash Sale (Phút)</label>
-            <div className="relative rounded-md shadow-sm">
-              <input
-                type="number"
-                min="1"
-                value={newUserFlashSaleDuration}
-                onChange={(e) => setNewUserFlashSaleDuration(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-gray-900 bg-white"
-                placeholder="Ví dụ: 30"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 sm:text-sm">phút</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Khoảng thời gian đếm ngược (phút) chạy cho mỗi khách hàng mới.</p>
-          </div>
-        </div>
-
-        {discountMessage.text && (
-          <div className={`p-3 rounded-md mb-6 text-sm font-medium ${discountMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {discountMessage.text}
-          </div>
-        )}
-
-        <button
-          onClick={handleSaveDiscount}
-          disabled={savingDiscount}
-          className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2 mb-4"
-        >
-          {savingDiscount ? 'Đang lưu...' : 'Lưu cấu hình Khuyến mãi'}
-        </button>
-      </div>
 
       {/* Email Template Settings */}
       <div className="bg-white shadow rounded-lg p-6 mb-8">
@@ -416,6 +319,190 @@ export default function SettingsPage() {
           className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2"
         >
           {savingInstructions ? 'Đang lưu...' : 'Lưu Hướng dẫn & Ghi chú'}
+        </button>
+      </div>
+
+      {/* ── Tùy chỉnh Giao diện: Màu nút Chi tiết ───────────────────────────── */}
+      <div className="bg-white shadow rounded-lg p-6 mb-8 border border-purple-100">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+          Tùy chỉnh giao diện — Nút “Xem Chi Tiết” trên Trang chủ
+        </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Chọn màu nền và màu chữ cho nút <strong>“Chi tiết”</strong> hiển thị trên mỗi card video ở trang chủ. Thay đổi có hiệu lực ngay khi khách hàng reload lại trang.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+          {/* Màu nền */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Màu nền nút</label>
+            <div className="flex items-center gap-4">
+              <input
+                type="color"
+                value={detailButtonColor.startsWith('#') ? detailButtonColor : '#6366f1'}
+                onChange={(e) => setDetailButtonColor(e.target.value)}
+                className="w-14 h-14 rounded-xl border-2 border-gray-200 cursor-pointer shadow-sm"
+                title="Chọn màu nền"
+              />
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={detailButtonColor}
+                  onChange={(e) => setDetailButtonColor(e.target.value)}
+                  placeholder="#6366f1 hoặc gradient CSS"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-purple-500 focus:border-purple-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Nhập mã HEX, rgba() hoặc gradient CSS (ví dụ: <code>linear-gradient(135deg,#f59e0b,#d97706)</code>)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Màu chữ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Màu chữ nút</label>
+            <div className="flex items-center gap-4">
+              <input
+                type="color"
+                value={detailButtonTextColor.startsWith('#') ? detailButtonTextColor : '#ffffff'}
+                onChange={(e) => setDetailButtonTextColor(e.target.value)}
+                className="w-14 h-14 rounded-xl border-2 border-gray-200 cursor-pointer shadow-sm"
+                title="Chọn màu chữ"
+              />
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={detailButtonTextColor}
+                  onChange={(e) => setDetailButtonTextColor(e.target.value)}
+                  placeholder="#ffffff"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Preview nút */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-gray-700 mb-2">Xem trước:</p>
+          <div className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg">
+            <button
+              style={{
+                background: detailButtonColor,
+                color: detailButtonTextColor,
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '12px',
+                border: 'none',
+                cursor: 'default',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              }}
+            >
+              Chi tiết
+            </button>
+            <span className="text-xs text-slate-400">← Nút sẽ trông như thế này trên card video</span>
+          </div>
+        </div>
+
+        {/* Preset nhanh */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-gray-700 mb-2">Chọn nhanh:</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: 'Indigo (mặc định)', bg: '#6366f1', text: '#ffffff' },
+              { label: 'Cyan', bg: '#0891b2', text: '#ffffff' },
+              { label: 'Amber Gold', bg: 'linear-gradient(135deg,#f59e0b,#d97706)', text: '#1c0a00' },
+              { label: 'Rose', bg: '#e11d48', text: '#ffffff' },
+              { label: 'Emerald', bg: '#059669', text: '#ffffff' },
+              { label: 'Slate', bg: '#475569', text: '#ffffff' },
+              { label: 'Purple Grad', bg: 'linear-gradient(135deg,#7c3aed,#a855f7)', text: '#ffffff' },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => { setDetailButtonColor(preset.bg); setDetailButtonTextColor(preset.text); }}
+                style={{ background: preset.bg, color: preset.text }}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border border-white/10 hover:scale-105 transition-transform"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {btnColorMessage.text && (
+          <div className={`p-3 rounded-md mb-4 text-sm font-medium ${btnColorMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {btnColorMessage.text}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveBtnColor}
+          disabled={savingBtnColor}
+          className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+        >
+          {savingBtnColor ? 'Đang lưu...' : 'Lưu màu nút Chi tiết'}
+        </button>
+      </div>
+
+      {/* ── Tùy chỉnh Footer ───────────────────────────────────────────────── */}
+      <div className="bg-white shadow rounded-lg p-6 mb-8 border border-cyan-100">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17h18" /></svg>
+          Tùy chỉnh Footer — Chân trang
+        </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Thay đổi nội dung bản quyền và dòng phụ hiển thị ở cuối trang web. Áp dụng cho mọi trang khách hàng truy cập.
+        </p>
+
+        <div className="space-y-4 mb-6">
+          {/* Dòng bản quyền */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dòng bản quyền (copyright)</label>
+            <input
+              type="text"
+              value={footerCopyright}
+              onChange={(e) => setFooterCopyright(e.target.value)}
+              placeholder={`© ${new Date().getFullYear()} MrKen Media. All rights reserved.`}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-cyan-500 focus:border-cyan-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">Ví dụ: © 2026 MrKen Media. All rights reserved.</p>
+          </div>
+
+          {/* Dòng phụ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dòng phụ (subtext)</label>
+            <input
+              type="text"
+              value={footerSubtext}
+              onChange={(e) => setFooterSubtext(e.target.value)}
+              placeholder="Tối ưu hóa bởi Google Drive & Next.js"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-cyan-500 focus:border-cyan-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">Ví dụ: Powered by Google Drive & Next.js</p>
+          </div>
+        </div>
+
+        {/* Preview Footer */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-gray-700 mb-2">Xem trước:</p>
+          <div className="bg-slate-950 border border-slate-800 rounded-lg p-6 text-center">
+            <p className="text-slate-400 text-sm">{footerCopyright}</p>
+            <p className="text-slate-400 text-sm mt-2">{footerSubtext}</p>
+          </div>
+        </div>
+
+        {footerMessage.text && (
+          <div className={`p-3 rounded-md mb-4 text-sm font-medium ${footerMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {footerMessage.text}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveFooter}
+          disabled={savingFooter}
+          className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+        >
+          {savingFooter ? 'Đang lưu...' : 'Lưu nội dung Footer'}
         </button>
       </div>
     </div>

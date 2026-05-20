@@ -19,6 +19,7 @@ export default function AdminBanners() {
   const [linkUrl, setLinkUrl] = useState('');
   const [order, setOrder] = useState('0');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
+  const [opacity, setOpacity] = useState('60');
 
   useEffect(() => {
     fetchBanners();
@@ -27,7 +28,8 @@ export default function AdminBanners() {
   const fetchBanners = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/banners');
+      // Add cache buster and no-store to prevent browser from caching old data
+      const res = await fetch(`/api/banners?_t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setBanners(data);
@@ -50,6 +52,7 @@ export default function AdminBanners() {
     setLinkUrl('');
     setOrder((banners.length * 10).toString());
     setStatus('active');
+    setOpacity('60');
     setIsModalOpen(true);
   };
 
@@ -62,6 +65,7 @@ export default function AdminBanners() {
     setLinkUrl(banner.linkUrl || '');
     setOrder(banner.order.toString());
     setStatus(banner.status || 'active');
+    setOpacity(banner.opacity !== undefined ? banner.opacity.toString() : '60');
     setIsModalOpen(true);
   };
 
@@ -102,6 +106,7 @@ export default function AdminBanners() {
       linkUrl,
       order: parseInt(order) || 0,
       status,
+      opacity: parseInt(opacity) || 60,
     };
 
     try {
@@ -190,8 +195,8 @@ export default function AdminBanners() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {banners.map((banner) => (
-            <div key={banner.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
+          {banners.map((banner, index) => (
+            <div key={`${banner.id}-${index}`} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between">
               {/* Media Preview Area */}
               <div className="relative aspect-[21/9] bg-slate-900 overflow-hidden flex items-center justify-center">
                 {banner.mediaType === 'video' ? (
@@ -340,25 +345,36 @@ export default function AdminBanners() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Link chuyển hướng (Khi click)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Link khi click</label>
                   <input
                     type="text"
-                    placeholder="Ví dụ: /category-abc"
+                    placeholder="Ví dụ: /category"
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white text-slate-900 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 placeholder-slate-400 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Thứ tự hiển thị (Order)</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Thứ tự</label>
                   <input
                     type="number"
                     placeholder="Ví dụ: 10"
                     value={order}
                     onChange={(e) => setOrder(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white text-slate-900 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 placeholder-slate-400 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Độ tối nền: {opacity}%</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={opacity}
+                    onChange={(e) => setOpacity(e.target.value)}
+                    className="w-full mt-3 accent-teal-600"
                   />
                 </div>
               </div>

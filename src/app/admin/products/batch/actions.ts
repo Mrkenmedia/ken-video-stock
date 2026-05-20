@@ -243,6 +243,9 @@ export async function scanDriveFolderAndImport(formData: FormData) {
       }
     });
 
+    const { clearProductsCache } = await import('@/lib/google');
+    clearProductsCache();
+
     revalidatePath('/admin/products');
     revalidatePath('/');
     

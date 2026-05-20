@@ -68,6 +68,7 @@ export default async function ProfilePage() {
         image: session.user.image || ''
       }} 
       orders={enrichedOrders} 
+      products={products}
     />
   );
 }

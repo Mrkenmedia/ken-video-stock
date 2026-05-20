@@ -10,7 +10,8 @@ export interface Product {
   slug: string;
   tags: string[];
   thumbnailUrl: string;
-  driveDemoId: string;
+  driveDemoId: string;       // Google Drive ID – dùng để tải demo miễn phí
+  youtubeDemoUrl?: string;   // YouTube URL – dùng để embed xem preview (không tốn bandwidth)
   driveGocMp4Id: string;
   priceMp4: number;
   driveGocMovId: string;
@@ -64,6 +65,9 @@ export interface Settings {
   newUserFlashSalePercent?: string;
   newUserFlashSaleDuration?: string;
   paymentInstructions?: string;
+  homepageCollections?: string;
+  footerCopyright?: string;
+  footerSubtext?: string;
 }
 
 export interface Banner {
@@ -75,4 +79,5 @@ export interface Banner {
   linkUrl?: string;
   order: number;
   status?: 'active' | 'inactive';
+  opacity?: number;
 }
