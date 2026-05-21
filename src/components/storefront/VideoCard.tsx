@@ -78,18 +78,16 @@ export default function VideoCard({ product }: VideoCardProps) {
     return basePrice;
   };
 
-  // Tính % giảm giá để hiển thị badge: ưu tiên Flash Sale, sau đó lấy từ giá gốc Sheets
+  // Tính % giảm giá để hiển thị badge: lấy từ giá gốc Sheets (Khuyến mãi toàn sàn)
   const hasMp4 = product.priceMp4 > 0;
   const basePrice = hasMp4 ? product.priceMp4 : product.priceMov;
   const origPrice = hasMp4
     ? (product.originalPriceMp4 ?? product.priceMp4)
     : (product.originalPriceMov ?? product.priceMov);
 
-  let discountBadgePct = 0;
-  if (isFlashSaleActive && flashSalePercent > 0) {
-    discountBadgePct = flashSalePercent;
-  } else if (origPrice > basePrice && basePrice > 0) {
-    discountBadgePct = Math.round((1 - basePrice / origPrice) * 100);
+  let globalDiscountPct = 0;
+  if (origPrice > basePrice && basePrice > 0) {
+    globalDiscountPct = Math.round((1 - basePrice / origPrice) * 100);
   }
 
   // Trích xuất Drive ID thực sự (có thể là full URL trong Sheets)
@@ -287,14 +285,22 @@ export default function VideoCard({ product }: VideoCardProps) {
       {/* Hover gradient for Title */}
       <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent transition-opacity duration-300 z-10 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`}></div>
 
-      {/* --- CORNER OVERLAYS (SHUTTERSTOCK STYLE) --- */}
+      {/* --- CORNER OVERLAYS --- */}
       
-      {/* Diagonal Discount Ribbon in Top-Left Corner */}
-      {discountBadgePct > 0 && (
-        <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-20 pointer-events-none">
-          <div className="absolute -top-[32px] -left-[32px] w-[64px] h-[64px] bg-red-600 text-white font-black text-[11px] flex items-end justify-center rotate-[-45deg] pb-[3px] shadow-lg">
-            {discountBadgePct}%
-          </div>
+      {/* Discount Badges in Top-Left Corner */}
+      {(globalDiscountPct > 0 || (isFlashSaleActive && flashSalePercent > 0)) && (
+        <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1.5 pointer-events-none">
+          {globalDiscountPct > 0 && (
+            <div className="bg-red-600/90 backdrop-blur-sm text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-lg border border-red-500/50 uppercase tracking-widest flex items-center">
+              -{globalDiscountPct}% Toàn Sàn
+            </div>
+          )}
+          {isFlashSaleActive && flashSalePercent > 0 && (
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg border border-amber-400/50 uppercase tracking-widest flex items-center gap-1 animate-pulse">
+              <svg className="w-3 h-3 text-yellow-100" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg>
+              +{flashSalePercent}% Thành Viên Mới
+            </div>
+          )}
         </div>
       )}
 
@@ -309,7 +315,29 @@ export default function VideoCard({ product }: VideoCardProps) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
         </button>
 
-        {/* Nút Tải Demo đã được gỡ bỏ để tiết kiệm bandwidth */}
+        {/* Nút Tải Demo — Gold Luxury (Direct Link để không tốn bandwidth proxy) */}
+        {demoId && (
+          <a 
+            href={`https://drive.google.com/uc?export=download&id=${demoId}`}
+            download={`${safeSlug}-demo.mp4`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center p-1.5 rounded backdrop-blur-sm transition-all shadow-md hover:scale-110"
+            style={{
+              background: 'linear-gradient(135deg, #f5c842, #d4a017, #f5c842)',
+              backgroundSize: '200% 200%',
+              color: '#3b1f00',
+              boxShadow: '0 2px 10px rgba(212,160,23,0.5)',
+              border: '1px solid rgba(255,220,80,0.6)',
+            }}
+            title="Tải video Demo"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </a>
+        )}
 
       </div>
 

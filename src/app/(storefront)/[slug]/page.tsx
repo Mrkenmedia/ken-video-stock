@@ -5,6 +5,7 @@ import { Metadata } from 'next';
 import { cache } from 'react';
 import BuyPanel from '@/components/storefront/BuyPanel';
 import VideoCard from '@/components/storefront/VideoCard';
+import DetailDiscountBadges from '@/components/storefront/DetailDiscountBadges';
 import { generateIdFromSku } from '@/lib/utils';
 
 /** Trích xuất Drive file ID từ full URL hoặc trả về nguyên bản */
@@ -137,21 +138,17 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                   <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">{product.name}</h1>
                   <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded-full text-xs font-mono border border-slate-700 font-bold">ID: {generateIdFromSku(product.sku)}</span>
                   <span className="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-cyan-500/30">Bản Demo</span>
-                  {/* Discount badge — tính từ giá gốc Sheets (server-side) */}
+                  {/* Discount badges using Client Component for Flash Sale reactivity */}
                   {(() => {
                     const base = product.priceMp4 > 0 ? product.priceMp4 : product.priceMov;
                     const orig = product.priceMp4 > 0
                       ? (product.originalPriceMp4 ?? 0)
                       : (product.originalPriceMov ?? 0);
+                    let globalDiscountPct = 0;
                     if (orig > base && base > 0) {
-                      const pct = Math.round((1 - base / orig) * 100);
-                      return (
-                        <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-black border border-orange-400/30 shadow-lg shadow-orange-500/20">
-                          -{pct}% GIẢM
-                        </span>
-                      );
+                      globalDiscountPct = Math.round((1 - base / orig) * 100);
                     }
-                    return null;
+                    return <DetailDiscountBadges globalDiscountPct={globalDiscountPct} />;
                   })()}
                 </div>
                 <div className="flex flex-wrap gap-2 mb-6">
