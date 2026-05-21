@@ -287,20 +287,19 @@ export default function VideoCard({ product }: VideoCardProps) {
 
       {/* --- CORNER OVERLAYS --- */}
       
-      {/* Discount Badges in Top-Left Corner */}
+      {/* Diagonal Triangle Ribbon in Top-Left Corner (Shutterstock Style) */}
       {(globalDiscountPct > 0 || (isFlashSaleActive && flashSalePercent > 0)) && (
-        <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1.5 pointer-events-none">
-          {globalDiscountPct > 0 && (
-            <div className="bg-red-600/90 backdrop-blur-sm text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-lg border border-red-500/50 uppercase tracking-widest flex items-center">
-              -{globalDiscountPct}% Toàn Sàn
+        <div className="absolute top-0 left-0 w-20 h-20 overflow-hidden z-20 pointer-events-none">
+          <div className="absolute -top-[40px] -left-[40px] w-[80px] h-[80px] bg-[#ff0000] text-white font-black flex items-end justify-center rotate-[-45deg] pb-2 shadow-lg">
+            <div className="flex items-baseline gap-0.5">
+              {globalDiscountPct > 0 && (
+                <span className="text-[14px] leading-none tracking-tight">{globalDiscountPct}%</span>
+              )}
+              {isFlashSaleActive && flashSalePercent > 0 && (
+                <span className="text-[10px] leading-none text-yellow-300 tracking-tight">+{flashSalePercent}%</span>
+              )}
             </div>
-          )}
-          {isFlashSaleActive && flashSalePercent > 0 && (
-            <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg border border-amber-400/50 uppercase tracking-widest flex items-center gap-1 animate-pulse">
-              <svg className="w-3 h-3 text-yellow-100" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg>
-              +{flashSalePercent}% Thành Viên Mới
-            </div>
-          )}
+          </div>
         </div>
       )}
 

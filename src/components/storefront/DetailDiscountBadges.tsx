@@ -17,7 +17,7 @@ export default function DetailDiscountBadges({ globalDiscountPct }: DetailDiscou
     <div className="flex flex-wrap items-center gap-2">
       {globalDiscountPct > 0 && (
         <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-black border border-red-500/50 shadow-lg shadow-red-500/20">
-          -{globalDiscountPct}% Toàn Sàn
+          -{globalDiscountPct}%
         </span>
       )}
       

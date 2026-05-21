@@ -239,6 +239,7 @@ export async function addProduct(product: Omit<Product, 'slug'> & { slug?: strin
             product.duration || '',                         // Col Q: duration
             product.fps || '60 FPS',                        // Col R: fps
             product.size || '',                             // Col S: size
+            product.youtubeDemoUrl || '',                   // Col T: youtubeDemoUrl
           ]
         ]
       }
@@ -289,6 +290,7 @@ export async function updateProduct(sku: string, product: Partial<Product>) {
       product.duration ?? existingRow[16] ?? '',                      // Col Q: duration
       product.fps ?? existingRow[17] ?? '60 FPS',                     // Col R: fps
       product.size ?? existingRow[18] ?? '',                          // Col S: size
+      product.youtubeDemoUrl ?? existingRow[19] ?? '',                // Col T: youtubeDemoUrl
     ];
 
     await sheets.spreadsheets.values.update({
