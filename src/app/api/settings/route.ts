@@ -3,10 +3,16 @@ import { getSettings, updateSetting, ensureSettingsSheet } from '@/lib/google';
 
 export const dynamic = 'force-dynamic';
 
+export const revalidate = 300;
+
 export async function GET() {
   try {
     const settings = await getSettings();
-    return NextResponse.json(settings);
+    return NextResponse.json(settings, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
+    });
   } catch (error) {
     console.error('Failed to get settings:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

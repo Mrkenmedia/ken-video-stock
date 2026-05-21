@@ -2,8 +2,8 @@
 
 import { useFlashSale } from '@/hooks/useFlashSale';
 
-export default function FlashSaleBanner() {
-  const { isFlashSaleActive, flashSalePercent, timeLeftMs } = useFlashSale();
+export default function FlashSaleBanner({ settings }: { settings?: any }) {
+  const { isFlashSaleActive, flashSalePercent, timeLeftMs } = useFlashSale(settings);
 
   if (!isFlashSaleActive || timeLeftMs <= 0) return null;
 

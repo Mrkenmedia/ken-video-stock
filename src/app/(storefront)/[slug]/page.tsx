@@ -31,7 +31,7 @@ function extractYouTubeId(value: string): string {
 // but only ONE real Sheets API call fires per page render.
 const getCachedProducts = cache(getProducts);
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
@@ -91,7 +91,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     extractYouTubeId(product.youtubeDemoUrl || '') ||
     extractYouTubeId(product.driveDemoId || '');
 
-  const driveThumbId = demoId || extractDriveId(product.driveGocMp4Id) || extractDriveId(product.driveGocMovId);
   const isGoogleThumb = product.thumbnailUrl && (
     product.thumbnailUrl.includes('googleusercontent.com') ||
     product.thumbnailUrl.includes('drive.google.com') ||
@@ -99,8 +98,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   );
   const thumbnail = (product.thumbnailUrl && !isGoogleThumb)
     ? product.thumbnailUrl
-    : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '')
-    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}&size=1024` : '');
+    : youtubeId 
+      ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` 
+      : '';
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -123,21 +123,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 {/* Gradient phủ dưới: che logo YouTube watermark */}
                 <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
               </div>
-            ) : demoId ? (
-              <video
-                src={`/api/drive-proxy?id=${demoId}`}
-                className="w-full h-full object-contain"
-                controls
-                controlsList="nodownload"
-                poster={thumbnail}
-                preload="metadata"
-                playsInline
-              >
-                Trình duyệt của bạn không hỗ trợ thẻ video.
-              </video>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-slate-500">
-                <p>Video demo chưa có sẵn</p>
+                <p>Vui lòng cập nhật YouTube URL để xem preview</p>
               </div>
             )}
           </div>

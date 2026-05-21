@@ -28,7 +28,7 @@ function isNewSession(): boolean {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function PromotionBanner() {
+export default function PromotionBanner({ settings }: { settings?: any }) {
   const [loading, setLoading] = useState(true);
   const [promotionEndMs, setPromotionEndMs] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -46,69 +46,59 @@ export default function PromotionBanner() {
   const [promoCtaBg, setPromoCtaBg] = useState(C.ctaBg);
   const [promoCtaText, setPromoCtaText] = useState(C.ctaText);
 
-  // Fetch dữ liệu từ settings
+  // Xử lý dữ liệu từ settings props thay vì fetch (tiết kiệm bandwidth)
   useEffect(() => {
-    fetch('/api/settings')
-      .then((r) => r.json())
-      .then((data) => {
-        const percent = Number(data?.globalDiscountPercent) || 0;
-        setDiscountPercent(percent);
+    const data = settings || {};
+    const percent = Number(data?.globalDiscountPercent) || 0;
+    setDiscountPercent(percent);
 
-        // Logic ẩn banner nếu không có giảm giá
-        if (percent <= 0) {
-          setVisible(false);
-          setLoading(false);
-          return;
-        }
+    // Logic ẩn banner nếu không có giảm giá
+    if (percent <= 0) {
+      setVisible(false);
+      setLoading(false);
+      return;
+    }
 
-        // Đọc thời gian bắt đầu (nếu có cài)
-        const startStr: string = data?.globalDiscountStart || '';
-        if (startStr) {
-          const startMs = new Date(startStr.includes('+') ? startStr : startStr + '+07:00').getTime();
-          if (Date.now() < startMs) {
-            setVisible(false); // Chưa tới lúc bắt đầu
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Đọc thời gian kết thúc
-        const endStr: string = data?.globalDiscountEnd || '';
-        let endMs: number = 0;
-        if (endStr) {
-          endMs = new Date(endStr.includes('+') ? endStr : endStr + '+07:00').getTime();
-        } else {
-          endMs = new Date(C.endDate).getTime();
-        }
-
-        if (Date.now() > endMs) {
-          setVisible(false); // Đã hết hạn
-          setLoading(false);
-          return;
-        }
-
-        // Load custom UI
-        if (data.promoTitle) setPromoTitle(data.promoTitle);
-        if (data.promoSubtitle) setPromoSubtitle(data.promoSubtitle);
-        if (data.promoColorFrom) setPromoColorFrom(data.promoColorFrom);
-        if (data.promoColorTo) setPromoColorTo(data.promoColorTo);
-        if (data.promoTextColor) setPromoTextColor(data.promoTextColor);
-        if (data.promoCtaLabel) setPromoCtaLabel(data.promoCtaLabel);
-        if (data.promoCtaBg) setPromoCtaBg(data.promoCtaBg);
-        if (data.promoCtaText) setPromoCtaText(data.promoCtaText);
-
-        setPromotionEndMs(endMs);
-        setTimeLeft(endMs - Date.now());
+    // Đọc thời gian bắt đầu (nếu có cài)
+    const startStr: string = data?.globalDiscountStart || '';
+    if (startStr) {
+      const startMs = new Date(startStr.includes('+') ? startStr : startStr + '+07:00').getTime();
+      if (Date.now() < startMs) {
+        setVisible(false); // Chưa tới lúc bắt đầu
         setLoading(false);
-      })
-      .catch(() => {
-        // Fallback nếu lỗi mạng
-        const endMs = new Date(C.endDate).getTime();
-        setPromotionEndMs(endMs);
-        setTimeLeft(endMs - Date.now());
-        setLoading(false);
-      });
-  }, []);
+        return;
+      }
+    }
+
+    // Đọc thời gian kết thúc
+    const endStr: string = data?.globalDiscountEnd || '';
+    let endMs: number = 0;
+    if (endStr) {
+      endMs = new Date(endStr.includes('+') ? endStr : endStr + '+07:00').getTime();
+    } else {
+      endMs = new Date(C.endDate).getTime();
+    }
+
+    if (Date.now() > endMs) {
+      setVisible(false); // Đã hết hạn
+      setLoading(false);
+      return;
+    }
+
+    // Load custom UI
+    if (data.promoTitle) setPromoTitle(data.promoTitle);
+    if (data.promoSubtitle) setPromoSubtitle(data.promoSubtitle);
+    if (data.promoColorFrom) setPromoColorFrom(data.promoColorFrom);
+    if (data.promoColorTo) setPromoColorTo(data.promoColorTo);
+    if (data.promoTextColor) setPromoTextColor(data.promoTextColor);
+    if (data.promoCtaLabel) setPromoCtaLabel(data.promoCtaLabel);
+    if (data.promoCtaBg) setPromoCtaBg(data.promoCtaBg);
+    if (data.promoCtaText) setPromoCtaText(data.promoCtaText);
+
+    setPromotionEndMs(endMs);
+    setTimeLeft(endMs - Date.now());
+    setLoading(false);
+  }, [settings]);
 
   // Đếm ngược — chỉ chạy sau khi có promotionEndMs
   useEffect(() => {

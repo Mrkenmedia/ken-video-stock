@@ -2,7 +2,7 @@ import { getProducts } from '@/lib/google';
 import VideoCard from '@/components/storefront/VideoCard';
 import Link from 'next/link';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 // Helper để format slug thành tên hiển thị đẹp hơn
 function formatCategoryName(slug: string) {

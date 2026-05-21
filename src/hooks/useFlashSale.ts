@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export function useFlashSale() {
+export function useFlashSale(settings?: any) {
   const [percent, setPercent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -26,41 +26,41 @@ export function useFlashSale() {
       setTimeLeftMs(Math.max(0, (d * 60 * 1000) - elapsed));
     }
 
-    // Always fetch fresh settings from API to ensure accuracy
-    fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.newUserFlashSalePercent && data.newUserFlashSaleDuration) {
-          const p = parseFloat(data.newUserFlashSalePercent);
-          const d = parseFloat(data.newUserFlashSaleDuration);
+    // Use provided settings instead of fetching
+    if (settings) {
+      if (settings.newUserFlashSalePercent && settings.newUserFlashSaleDuration) {
+        const p = parseFloat(settings.newUserFlashSalePercent);
+        const d = parseFloat(settings.newUserFlashSaleDuration);
+        
+        if (p > 0 && d > 0) {
+          setPercent(p);
+          setDuration(d);
+          localStorage.setItem('ken_flash_sale_percent', p.toString());
+          localStorage.setItem('ken_flash_sale_duration', d.toString());
           
-          if (p > 0 && d > 0) {
-            setPercent(p);
-            setDuration(d);
-            localStorage.setItem('ken_flash_sale_percent', p.toString());
-            localStorage.setItem('ken_flash_sale_duration', d.toString());
-            
-            let s = localStorage.getItem('ken_flash_sale_start');
-            if (!s) {
-              s = Date.now().toString();
-              localStorage.setItem('ken_flash_sale_start', s);
-            }
-            const startVal = parseInt(s);
-            setStartTime(startVal);
-            
-            const elapsed = Date.now() - startVal;
-            setTimeLeftMs(Math.max(0, (d * 60 * 1000) - elapsed));
-          } else {
-            // Flash sale turned off by admin
-            setPercent(0);
-            localStorage.removeItem('ken_flash_sale_percent');
-            localStorage.removeItem('ken_flash_sale_duration');
-            localStorage.removeItem('ken_flash_sale_start');
+          let s = localStorage.getItem('ken_flash_sale_start');
+          if (!s) {
+            s = Date.now().toString();
+            localStorage.setItem('ken_flash_sale_start', s);
           }
+          const startVal = parseInt(s);
+          setStartTime(startVal);
+          
+          const elapsed = Date.now() - startVal;
+          setTimeLeftMs(Math.max(0, (d * 60 * 1000) - elapsed));
+        } else {
+          // Flash sale turned off by admin
+          setPercent(0);
+          localStorage.removeItem('ken_flash_sale_percent');
+          localStorage.removeItem('ken_flash_sale_duration');
+          localStorage.removeItem('ken_flash_sale_start');
         }
-      })
-      .catch(err => console.error('Flash sale settings error:', err));
-  }, []);
+      } else {
+        // No flash sale settings
+        setPercent(0);
+      }
+    }
+  }, [settings]);
 
   useEffect(() => {
     if (!startTime || !duration || percent <= 0) return;

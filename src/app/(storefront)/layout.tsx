@@ -24,8 +24,8 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <DetailButtonStyleLoader />
       {/* Sticky wrapper: banner + navbar scroll together and stay fixed at top */}
       <div id="main-header-wrapper" className="sticky top-0 z-50">
-        <FlashSaleBanner />
-        <PromotionBanner />
+        <FlashSaleBanner settings={settings} />
+        <PromotionBanner settings={settings} />
         {/* Premium Navbar */}
         <header className="w-full border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">

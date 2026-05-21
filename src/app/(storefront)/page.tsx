@@ -2,8 +2,8 @@ import { getProducts, getTags, getBanners, getSettings } from '@/lib/google';
 import VideoCard from '@/components/storefront/VideoCard';
 import StorefrontGrid from '@/components/storefront/StorefrontGrid';
 
-// Caching dữ liệu 5 giây (ISR)
-export const revalidate = 5;
+// Caching dữ liệu 60 giây (ISR)
+export const revalidate = 60;
 
 export default async function StorefrontHome() {
   const [products, tags, banners, settings] = await Promise.all([

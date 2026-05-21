@@ -101,9 +101,6 @@ export default function VideoCard({ product }: VideoCardProps) {
   const mp4Id  = extractDriveId(product.driveGocMp4Id);
   const movId  = extractDriveId(product.driveGocMovId);
 
-  // Ưu tiên thumbnailUrl từ Sheets (nếu là link ngoài công khai), fallback về Drive Demo proxy, sau đó về File Gốc MP4/MOV proxy
-  const driveThumbId = (!youtubeId && demoId) ? demoId : (mp4Id || movId);
-  
   // Phát hiện xem thumbnail từ Sheets có phải là link Google Drive/Usercontent riêng tư hay không
   const isGoogleThumb = product.thumbnailUrl && (
     product.thumbnailUrl.includes('googleusercontent.com') || 
@@ -111,11 +108,12 @@ export default function VideoCard({ product }: VideoCardProps) {
     product.thumbnailUrl.includes('google.com')
   );
 
-  // YouTube thumbnail: dùng maxresdefault để có chất lượng cao nhất, Google Drive dùng proxy với size lớn, link ngoài dùng trực tiếp
+  // YouTube thumbnail: dùng maxresdefault để có chất lượng cao nhất, link ngoài dùng trực tiếp
   const bgImage = (product.thumbnailUrl && !isGoogleThumb)
     ? product.thumbnailUrl
-    : (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '')
-    || (driveThumbId ? `/api/thumbnail-proxy?id=${driveThumbId}&size=1920` : '/placeholder-video.jpg');
+    : youtubeId 
+      ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` 
+      : '/placeholder-video.jpg';
 
   const slugify = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').trim().replace(/^-|-$/g, '');
   const safeSlug = slugify(product.slug || product.sku);
@@ -153,19 +151,7 @@ export default function VideoCard({ product }: VideoCardProps) {
        return;
     }
 
-    if (!demoId || !videoRef.current) return;
-
-    const video = videoRef.current;
-    if (!srcLoadedRef.current) {
-      video.src = `/api/drive-proxy?id=${demoId}`;
-      video.load();
-      srcLoadedRef.current = true;
-      setIsBuffering(true);
-    }
-
-    video.play().catch(err => {
-      console.warn("Video play failed:", err);
-    });
+    if (!youtubeId) return; // Fallback if no youtubeId
   };
 
   const toggleFullscreen = (e: React.MouseEvent) => {
@@ -260,19 +246,7 @@ export default function VideoCard({ product }: VideoCardProps) {
         className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
       />
 
-      {/* Video Preview (Google Drive HTML5 - chỉ dùng khi KHÔNG có YouTube) */}
-      {demoId && !youtubeId && (
-        <video
-          ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-500 ${isPreviewPlaying ? 'opacity-100' : 'opacity-0'}`}
-          muted
-          loop
-          playsInline
-          preload="none"
-          onPlaying={handleVideoPlaying}
-          onWaiting={handleVideoWaiting}
-        />
-      )}
+      {/* Removed Google Drive HTML5 Video Preview */}
 
       {/* YouTube Preview - Giữ nguyên kích thước, dùng gradient che thanh tiêu đề/tên kênh */}
       {youtubeId && isPreviewPlaying && (
@@ -335,29 +309,7 @@ export default function VideoCard({ product }: VideoCardProps) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
         </button>
 
-        {/* Nút Tải Demo — Gold Luxury */}
-        {demoId && !youtubeId && (
-          <a 
-            href={`/api/drive-proxy?id=${demoId}`}
-            download={`${safeSlug}-demo.mp4`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center justify-center p-1.5 rounded backdrop-blur-sm transition-all shadow-md"
-            style={{
-              background: 'linear-gradient(135deg, #f5c842, #d4a017, #f5c842)',
-              backgroundSize: '200% 200%',
-              color: '#3b1f00',
-              boxShadow: '0 2px 10px rgba(212,160,23,0.5)',
-              border: '1px solid rgba(255,220,80,0.6)',
-            }}
-            title="Tải video Demo"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </a>
-        )}
+        {/* Nút Tải Demo đã được gỡ bỏ để tiết kiệm bandwidth */}
 
       </div>
 
@@ -458,15 +410,9 @@ export default function VideoCard({ product }: VideoCardProps) {
                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/70 to-transparent z-10 pointer-events-none" />
                  </>
                ) : (
-                 <video
-                   src={`/api/drive-proxy?id=${demoId}`}
-                   className="w-full h-full object-contain"
-                   controls
-                   autoPlay
-                   controlsList="nodownload"
-                   preload="metadata"
-                   playsInline
-                 />
+                 <div className="w-full h-full flex items-center justify-center text-slate-500">
+                   <p>Video demo chưa có sẵn</p>
+                 </div>
                )}
             </div>
             
