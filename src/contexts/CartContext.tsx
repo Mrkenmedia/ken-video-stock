@@ -164,8 +164,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const effectiveTotal = effectiveItems.reduce((sum, item) => sum + item.effectivePrice, 0);
   const cartCount = items.length;
 
-  // Tier discount áp trên effectiveTotal (sau flash sale, CHỈ khi không có Flash Sale hoạt động)
-  const activeTier = (!isFlashSaleActive && tiers.length > 0) ? tiers.find(t => cartCount >= t.minItems) : undefined;
+  // Tier discount áp trên effectiveTotal (sau flash sale)
+  const activeTier = (tiers.length > 0) ? tiers.find(t => cartCount >= t.minItems) : undefined;
   const tierDiscountPercent = activeTier ? activeTier.discountPercent : 0;
   const finalTotal = Math.round(effectiveTotal * (1 - tierDiscountPercent / 100));
 
