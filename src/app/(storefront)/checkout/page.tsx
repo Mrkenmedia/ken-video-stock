@@ -23,7 +23,7 @@ import { useCart } from '@/contexts/CartContext';
 
 function CheckoutContent() {
   const router = useRouter();
-  const { items, effectiveTotal, cartTotal, baseTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal, isFlashSaleActive } = useCart();
+  const { items, effectiveItems, effectiveTotal, cartTotal, baseTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal, isFlashSaleActive } = useCart();
 
   const { data: session } = useSession();
   const [email, setEmail] = useState('');
@@ -211,7 +211,7 @@ function CheckoutContent() {
               <Link href="/cart" className="text-xs text-cyan-400 hover:underline">Sửa giỏ hàng</Link>
             </div>
             <div className="divide-y divide-slate-800">
-              {items.map((item) => {
+              {effectiveItems.map((item) => {
                 const itemOriginalPrice = item.originalPrice || item.price;
                 return (
                 <div key={`${item.sku}-${item.format}`} className="p-4 flex gap-4 items-center">
@@ -225,13 +225,13 @@ function CheckoutContent() {
                     <p className="text-[10px] text-slate-500 font-mono uppercase">{item.sku} • {item.format}</p>
                   </div>
                   <div className="text-right">
-                    {itemOriginalPrice > item.price && (
+                    {itemOriginalPrice > item.effectivePrice && (
                       <p className="text-[10px] text-slate-500 line-through mb-0.5">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(itemOriginalPrice)}
                       </p>
                     )}
                     <p className="text-sm font-bold text-slate-300">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.effectivePrice)}
                     </p>
                   </div>
                 </div>
