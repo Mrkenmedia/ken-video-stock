@@ -16,6 +16,7 @@ export default function PromotionsPage() {
   const [tierPopupDescription, setTierPopupDescription] = useState('Mua càng nhiều, giảm càng sâu. Giảm thêm lên tới {maxTier}% khi mua số lượng lớn!');
   const [tierPopupColor, setTierPopupColor] = useState('cyan');
   const [tierPopupEffect, setTierPopupEffect] = useState('bounce');
+  const [tierPopupCta, setTierPopupCta] = useState('Thu Gọn');
   
   const [promoTitle, setPromoTitle] = useState('🔥 KHUYẾN MÃI TOÀN SÀN 🔥');
   const [promoSubtitle, setPromoSubtitle] = useState('Giảm tới {discount}% — Kho video chất lượng 4K');
@@ -50,6 +51,7 @@ export default function PromotionsPage() {
         if (data.tierPopupDescription) setTierPopupDescription(data.tierPopupDescription);
         if (data.tierPopupColor) setTierPopupColor(data.tierPopupColor);
         if (data.tierPopupEffect) setTierPopupEffect(data.tierPopupEffect);
+        if (data.tierPopupCta) setTierPopupCta(data.tierPopupCta);
         
         if (data.promoTitle) setPromoTitle(data.promoTitle);
         if (data.promoSubtitle) setPromoSubtitle(data.promoSubtitle);
@@ -150,6 +152,7 @@ export default function PromotionsPage() {
             tierPopupDescription,
             tierPopupColor,
             tierPopupEffect,
+            tierPopupCta,
           }
         }),
       });
@@ -474,6 +477,15 @@ export default function PromotionsPage() {
                 <option value="purple">Purple (Tím quyền lực)</option>
                 <option value="rose">Rose (Hồng nhạt)</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Chữ trên Nút bấm</label>
+              <input
+                type="text"
+                value={tierPopupCta}
+                onChange={(e) => setTierPopupCta(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Hiệu ứng chuyển động (Animation)</label>

@@ -53,6 +53,7 @@ export default function TierPopup() {
   const description = (settings.tierPopupDescription || 'Mua càng nhiều, giảm càng sâu. Giảm thêm lên tới {maxTier}% khi mua số lượng lớn!').replace('{maxTier}', maxTierPercent.toString());
   const colorMode = settings.tierPopupColor || 'cyan';
   const effect = settings.tierPopupEffect || 'bounce';
+  const ctaLabel = settings.tierPopupCta || 'Thu Gọn';
 
   const getColorClasses = (mode: string, isMinimized: boolean) => {
     switch(mode) {
@@ -134,13 +135,12 @@ export default function TierPopup() {
               <p className="text-sm text-white/90 leading-relaxed mb-4">
                 {description}
               </p>
-              <Link 
-                href="/" 
+              <a 
                 onClick={handleMinimize}
-                className="inline-block w-full text-center bg-white text-slate-900 font-bold py-2 px-4 rounded-xl shadow-md hover:bg-slate-100 transition-colors"
+                className="inline-block w-full text-center bg-white text-slate-900 font-bold py-2 px-4 rounded-xl shadow-md hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                Khám phá ngay
-              </Link>
+                {ctaLabel}
+              </a>
             </div>
           </div>
         </div>
