@@ -139,8 +139,23 @@ export default function PromotionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tiers }),
       });
-      if (res.ok) {
-        setTiersMessage({ type: 'success', text: 'Đã lưu cấu hình Ưu đãi mua nhiều thành công.' });
+      
+      const settingsRes = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            tierPopupEnabled,
+            tierPopupTitle,
+            tierPopupDescription,
+            tierPopupColor,
+            tierPopupEffect,
+          }
+        }),
+      });
+
+      if (res.ok && settingsRes.ok) {
+        setTiersMessage({ type: 'success', text: 'Đã lưu cấu hình Ưu đãi & Popup thành công.' });
       } else {
         setTiersMessage({ type: 'error', text: 'Lỗi khi lưu cấu hình.' });
       }
@@ -473,13 +488,6 @@ export default function PromotionsPage() {
               </select>
             </div>
           </div>
-          <button
-            onClick={handleSaveDiscount}
-            disabled={savingDiscount}
-            className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2 mb-4"
-          >
-            {savingDiscount ? 'Đang lưu...' : 'Lưu cài đặt Popup'}
-          </button>
         </div>
 
         {tiersMessage.text && (
@@ -493,7 +501,7 @@ export default function PromotionsPage() {
           disabled={savingTiers}
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2"
         >
-          {savingTiers ? 'Đang lưu...' : 'Lưu cấu hình Ưu đãi mua nhiều'}
+          {savingTiers ? 'Đang lưu...' : 'Lưu toàn bộ cài đặt (Ưu đãi & Popup)'}
         </button>
       </div>
     </div>
