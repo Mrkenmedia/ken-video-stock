@@ -11,7 +11,7 @@ export default function PromotionsPage() {
   const [newUserFlashSalePercent, setNewUserFlashSalePercent] = useState('0');
   const [newUserFlashSaleDuration, setNewUserFlashSaleDuration] = useState('0');
   
-  const [tierPopupEnabled, setTierPopupEnabled] = useState('false');
+  const [tierPopupEnabled, setTierPopupEnabled] = useState('true');
   const [tierPopupTitle, setTierPopupTitle] = useState('🎁 Ưu đãi độc quyền hôm nay!');
   const [tierPopupDescription, setTierPopupDescription] = useState('Mua càng nhiều, giảm càng sâu. Giảm thêm lên tới {maxTier}% khi mua số lượng lớn!');
   const [tierPopupColor, setTierPopupColor] = useState('cyan');
@@ -36,7 +36,7 @@ export default function PromotionsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch(`/api/settings?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         
         setGlobalDiscountPercent(data.globalDiscountPercent || '0');
@@ -45,7 +45,7 @@ export default function PromotionsPage() {
         setNewUserFlashSalePercent(data.newUserFlashSalePercent || '0');
         setNewUserFlashSaleDuration(data.newUserFlashSaleDuration || '0');
         
-        if (data.tierPopupEnabled) setTierPopupEnabled(data.tierPopupEnabled);
+        setTierPopupEnabled(data.tierPopupEnabled !== undefined ? String(data.tierPopupEnabled) : 'true');
         if (data.tierPopupTitle) setTierPopupTitle(data.tierPopupTitle);
         if (data.tierPopupDescription) setTierPopupDescription(data.tierPopupDescription);
         if (data.tierPopupColor) setTierPopupColor(data.tierPopupColor);
@@ -60,7 +60,7 @@ export default function PromotionsPage() {
         if (data.promoCtaBg) setPromoCtaBg(data.promoCtaBg);
         if (data.promoCtaText) setPromoCtaText(data.promoCtaText);
 
-        const tiersRes = await fetch('/api/tiers');
+        const tiersRes = await fetch(`/api/tiers?t=${Date.now()}`, { cache: 'no-store' });
         if (tiersRes.ok) {
           const tiersData = await tiersRes.json();
           setTiers(tiersData || []);
@@ -433,7 +433,7 @@ export default function PromotionsPage() {
             <input
               id="tierPopupEnabled"
               type="checkbox"
-              checked={tierPopupEnabled === 'true'}
+              checked={String(tierPopupEnabled).toLowerCase() === 'true'}
               onChange={(e) => setTierPopupEnabled(e.target.checked ? 'true' : 'false')}
               className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
             />

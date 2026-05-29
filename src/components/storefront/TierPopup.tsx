@@ -21,7 +21,7 @@ export default function TierPopup() {
           const settingsData = await settingsRes.json();
           const tiersData = await tiersRes.json();
           
-          if (settingsData.tierPopupEnabled === 'true') {
+          if (String(settingsData.tierPopupEnabled).toLowerCase() === 'true') {
             setSettings(settingsData);
             
             if (tiersData && tiersData.length > 0) {
