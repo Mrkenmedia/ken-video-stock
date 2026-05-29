@@ -13,6 +13,8 @@ export async function GET() {
         name: p.name,
         priceMp4: p.priceMp4,
         priceMov: p.priceMov,
+        originalPriceMp4: p.originalPriceMp4,
+        originalPriceMov: p.originalPriceMov,
       }));
 
     return NextResponse.json(activeProducts, {

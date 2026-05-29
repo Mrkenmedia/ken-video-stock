@@ -23,7 +23,7 @@ import { useCart } from '@/contexts/CartContext';
 
 function CheckoutContent() {
   const router = useRouter();
-  const { items, effectiveTotal, cartTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal, isFlashSaleActive } = useCart();
+  const { items, effectiveTotal, cartTotal, baseTotal, cartCount, tierDiscountPercent, finalTotal: cartFinalTotal, isFlashSaleActive } = useCart();
 
   const { data: session } = useSession();
   const [email, setEmail] = useState('');
@@ -211,7 +211,9 @@ function CheckoutContent() {
               <Link href="/cart" className="text-xs text-cyan-400 hover:underline">Sửa giỏ hàng</Link>
             </div>
             <div className="divide-y divide-slate-800">
-              {items.map((item) => (
+              {items.map((item) => {
+                const itemOriginalPrice = item.originalPrice || item.price;
+                return (
                 <div key={`${item.sku}-${item.format}`} className="p-4 flex gap-4 items-center">
                   {item.thumbnailUrl && (
                     <div className="w-16 h-10 rounded bg-slate-800 overflow-hidden shrink-0">
@@ -223,12 +225,17 @@ function CheckoutContent() {
                     <p className="text-[10px] text-slate-500 font-mono uppercase">{item.sku} • {item.format}</p>
                   </div>
                   <div className="text-right">
+                    {itemOriginalPrice > item.price && (
+                      <p className="text-[10px] text-slate-500 line-through mb-0.5">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(itemOriginalPrice)}
+                      </p>
+                    )}
                     <p className="text-sm font-bold text-slate-300">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
                     </p>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
@@ -298,40 +305,84 @@ function CheckoutContent() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Tạm tính ({items.length} file)</span>
-                  <span className="text-white font-medium">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
+                  <span className="text-slate-400">Tổng giá sản phẩm gốc:</span>
+                  <span className="text-white font-medium">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(baseTotal)}</span>
                 </div>
+                
+                {/* Global Discount */}
+                {baseTotal > cartTotal && (
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm bg-blue-50/10 p-3 rounded-lg text-blue-400 font-medium border border-blue-500/20">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                       <span>🎉 Khuyến mãi toàn sàn</span>
+                       <span className="text-[11px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full shrink-0">
+                          -{Math.round(((baseTotal - cartTotal) / baseTotal) * 100)}%
+                       </span>
+                    </div>
+                    <span className="text-blue-400 font-bold self-end sm:self-auto shrink-0">
+                      -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(baseTotal - cartTotal)}
+                    </span>
+                  </div>
+                )}
                 
                 {/* Flash Sale Discount */}
                 {!isExclusive && cartTotal > effectiveTotal && (
-                  <div className="flex justify-between text-sm text-amber-400 font-medium">
-                    <span>⚡ Ưu đãi Flash Sale</span>
-                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal - effectiveTotal)}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm bg-amber-50/10 p-3 rounded-lg text-amber-400 font-medium border border-amber-500/20">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                       <span>⚡ Trợ giá / Flash Sale</span>
+                       <span className="text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full shrink-0">
+                          -{Math.round(((cartTotal - effectiveTotal) / cartTotal) * 100)}%
+                       </span>
+                    </div>
+                    <span className="text-amber-400 font-bold self-end sm:self-auto shrink-0">
+                      -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal - effectiveTotal)}
+                    </span>
                   </div>
                 )}
 
                 {/* Tier Discount */}
                 {!isExclusive && tierDiscountPercent > 0 && (
-                  <div className="flex justify-between text-sm text-green-400 font-medium">
-                    <span>📦 Ưu đãi mua nhiều (-{tierDiscountPercent}%)</span>
-                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(effectiveTotal - cartFinalTotal)}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm bg-green-50/10 p-3 rounded-lg text-green-400 font-medium border border-green-500/20">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span>📦 Ưu đãi mua nhiều</span>
+                      <span className="text-[11px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full shrink-0">
+                        -{tierDiscountPercent}%
+                      </span>
+                    </div>
+                    <span className="text-green-400 font-bold self-end sm:self-auto shrink-0">
+                      -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(effectiveTotal - cartFinalTotal)}
+                    </span>
                   </div>
                 )}
 
                 {/* Coupon Discount */}
                 {appliedCoupon && (
-                  <div className="flex justify-between text-sm text-cyan-400 font-medium">
-                    <span>🎫 Mã giảm giá ({appliedCoupon}) {isExclusive ? '(Độc quyền, vô hiệu hóa ưu đãi khác)' : ''}</span>
-                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm bg-cyan-50/10 p-3 rounded-lg text-cyan-400 font-medium border border-cyan-500/20">
+                    <span>🎫 Mã giảm giá ({appliedCoupon}) {isExclusive ? '(Độc quyền)' : ''}</span>
+                    <span className="text-cyan-400 font-bold self-end sm:self-auto shrink-0">
+                      -{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discountAmount)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Total savings */}
+                {baseTotal > finalPriceToPay && (
+                  <div className="flex justify-between text-sm text-red-400 font-bold border-t border-slate-800 border-dashed pt-3 mt-2">
+                    <span>✨ Tổng tiền bạn tiết kiệm được:</span>
+                    <span>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(baseTotal - finalPriceToPay)}</span>
                   </div>
                 )}
               </div>
 
               <div className="flex justify-between items-center mb-6 border-t border-slate-800 pt-4">
-                <span className="text-slate-400">Tổng thanh toán</span>
-                <span className="text-2xl font-bold text-cyan-400">
-                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalPriceToPay)}
-                </span>
+                <span className="text-slate-400 text-lg">Cần thanh toán</span>
+                <div className="text-right">
+                   {baseTotal > finalPriceToPay && (
+                     <div className="text-sm text-slate-500 line-through mb-1">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(baseTotal)}</div>
+                   )}
+                   <span className="text-3xl font-extrabold text-cyan-400">
+                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(finalPriceToPay)}
+                   </span>
+                </div>
               </div>
               <button
                 onClick={handleCreateOrder}

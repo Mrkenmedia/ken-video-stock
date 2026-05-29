@@ -31,8 +31,10 @@ function isNewSession(): boolean {
 export default function PromotionBanner({ settings }: { settings?: any }) {
   const [loading, setLoading] = useState(true);
   const [promotionEndMs, setPromotionEndMs] = useState<number>(0);
+  const [promotionStartMs, setPromotionStartMs] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [visible, setVisible] = useState(true);
+  const [closedByUser, setClosedByUser] = useState(false);
   const tracked = useRef(false);
 
   // States lấy từ Settings API
@@ -59,15 +61,11 @@ export default function PromotionBanner({ settings }: { settings?: any }) {
       return;
     }
 
-    // Đọc thời gian bắt đầu (nếu có cài)
+    // Đọc thời gian bắt đầu
+    let startMs: number = 0;
     const startStr: string = data?.globalDiscountStart || '';
     if (startStr) {
-      const startMs = new Date(startStr.includes('+') ? startStr : startStr + '+07:00').getTime();
-      if (Date.now() < startMs) {
-        setVisible(false); // Chưa tới lúc bắt đầu
-        setLoading(false);
-        return;
-      }
+      startMs = new Date(startStr.includes('+') ? startStr : startStr + '+07:00').getTime();
     }
 
     // Đọc thời gian kết thúc
@@ -95,19 +93,35 @@ export default function PromotionBanner({ settings }: { settings?: any }) {
     if (data.promoCtaBg) setPromoCtaBg(data.promoCtaBg);
     if (data.promoCtaText) setPromoCtaText(data.promoCtaText);
 
+    setPromotionStartMs(startMs);
     setPromotionEndMs(endMs);
     setTimeLeft(endMs - Date.now());
     setLoading(false);
   }, [settings]);
 
-  // Đếm ngược — chỉ chạy sau khi có promotionEndMs
+  // Đếm ngược và kiểm tra giờ kích hoạt liên tục
   useEffect(() => {
     if (!promotionEndMs) return;
-    const id = setInterval(() => {
-      setTimeLeft(promotionEndMs - Date.now());
-    }, 1000);
+    
+    const checkStatus = () => {
+      const now = Date.now();
+      setTimeLeft(promotionEndMs - now);
+      
+      // Kiểm tra nếu có cài đặt giờ bắt đầu
+      if (promotionStartMs) {
+        if (now >= promotionStartMs && !closedByUser) {
+          setVisible(true); // Tự động hiển thị khi tới giờ
+        } else if (now < promotionStartMs) {
+          setVisible(false); // Ẩn khi chưa tới giờ
+        }
+      }
+    };
+    
+    checkStatus(); // Gọi ngay lần đầu
+    
+    const id = setInterval(checkStatus, 1000);
     return () => clearInterval(id);
-  }, [promotionEndMs]);
+  }, [promotionEndMs, promotionStartMs, closedByUser]);
 
 
   // Tracking: ghi nhận lần xem (1 lần duy nhất khi banner mount)
@@ -203,7 +217,10 @@ export default function PromotionBanner({ settings }: { settings?: any }) {
       {/* Nút đóng */}
       <button
         className="promo-close"
-        onClick={() => setVisible(false)}
+        onClick={() => {
+          setVisible(false);
+          setClosedByUser(true);
+        }}
         aria-label="Đóng banner khuyến mãi"
       >
         ×

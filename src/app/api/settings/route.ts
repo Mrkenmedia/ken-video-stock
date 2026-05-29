@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSettings, updateSetting, ensureSettingsSheet } from '@/lib/google';
+import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export async function GET() {
   try {
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       for (const [key, value] of entries) {
         await updateSetting(key, String(value));
       }
+      revalidatePath('/', 'layout');
       return NextResponse.json({ success: true });
     }
 
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
     const success = await updateSetting(key, value);
 
     if (success) {
+      revalidatePath('/', 'layout');
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: 'Failed to update setting' }, { status: 500 });

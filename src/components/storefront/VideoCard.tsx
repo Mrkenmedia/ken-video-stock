@@ -183,14 +183,17 @@ export default function VideoCard({ product }: VideoCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     const format = product.priceMp4 > 0 ? 'MP4' : 'MOV';
-    // Lưu GIÁ GỐC — CartContext sẽ áp Flash Sale động
     const basePriceToStore = product.priceMp4 > 0 ? product.priceMp4 : product.priceMov;
+    const origPriceToStore = product.priceMp4 > 0 
+      ? (product.originalPriceMp4 || basePriceToStore) 
+      : (product.originalPriceMov || basePriceToStore);
 
     addToCart({
       sku: product.sku,
       name: product.name,
       format,
       price: basePriceToStore,
+      originalPrice: origPriceToStore,
       thumbnailUrl: bgImage
     });
     setIsCartOpen(true);

@@ -807,6 +807,31 @@ export async function getTiers(): Promise<{ minItems: number; discountPercent: n
   }
 }
 
+export async function updateTiers(tiers: { minItems: number; discountPercent: number }[]): Promise<boolean> {
+  try {
+    // Clear old tiers
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Tiers!A2:B',
+    });
+    
+    if (tiers.length > 0) {
+      const values = tiers.map(t => [t.minItems.toString(), t.discountPercent.toString()]);
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Tiers!A2:B',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values },
+      });
+    }
+    delete promiseCache['Tiers!A2:B'];
+    return true;
+  } catch (error) {
+    console.error('Error updating tiers:', error);
+    return false;
+  }
+}
+
 /**
  * Lấy lịch sử mua hàng của một email
  */

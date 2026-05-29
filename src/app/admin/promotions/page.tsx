@@ -23,6 +23,10 @@ export default function PromotionsPage() {
   const [savingDiscount, setSavingDiscount] = useState(false);
   const [discountMessage, setDiscountMessage] = useState({ type: '', text: '' });
 
+  const [tiers, setTiers] = useState<{minItems: number, discountPercent: number}[]>([]);
+  const [savingTiers, setSavingTiers] = useState(false);
+  const [tiersMessage, setTiersMessage] = useState({ type: '', text: '' });
+
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -43,6 +47,12 @@ export default function PromotionsPage() {
         if (data.promoCtaLabel) setPromoCtaLabel(data.promoCtaLabel);
         if (data.promoCtaBg) setPromoCtaBg(data.promoCtaBg);
         if (data.promoCtaText) setPromoCtaText(data.promoCtaText);
+
+        const tiersRes = await fetch('/api/tiers');
+        if (tiersRes.ok) {
+          const tiersData = await tiersRes.json();
+          setTiers(tiersData || []);
+        }
       } catch (error) {
         console.error('Failed to load settings:', error);
       } finally {
@@ -86,6 +96,41 @@ export default function PromotionsPage() {
       setDiscountMessage({ type: 'error', text: 'Không kết nối được server.' });
     } finally {
       setSavingDiscount(false);
+    }
+  };
+
+  const handleAddTier = () => {
+    setTiers([...tiers, { minItems: 2, discountPercent: 10 }]);
+  };
+
+  const handleUpdateTier = (index: number, field: 'minItems' | 'discountPercent', value: string) => {
+    const newTiers = [...tiers];
+    newTiers[index][field] = parseInt(value) || 0;
+    setTiers(newTiers);
+  };
+
+  const handleRemoveTier = (index: number) => {
+    setTiers(tiers.filter((_, i) => i !== index));
+  };
+
+  const handleSaveTiers = async () => {
+    setSavingTiers(true);
+    setTiersMessage({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/tiers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tiers }),
+      });
+      if (res.ok) {
+        setTiersMessage({ type: 'success', text: 'Đã lưu cấu hình Ưu đãi mua nhiều thành công.' });
+      } else {
+        setTiersMessage({ type: 'error', text: 'Lỗi khi lưu cấu hình.' });
+      }
+    } catch (error) {
+      setTiersMessage({ type: 'error', text: 'Không kết nối được server.' });
+    } finally {
+      setSavingTiers(false);
     }
   };
 
@@ -277,6 +322,83 @@ export default function PromotionsPage() {
           className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2 mb-4"
         >
           {savingDiscount ? 'Đang lưu...' : 'Lưu cấu hình Khuyến mãi'}
+        </button>
+      </div>
+
+      {/* Tiers Settings */}
+      <div className="bg-white shadow rounded-lg p-6 mb-8 border border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          Chương trình Ưu đãi Mua nhiều (Tiers)
+        </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          Kích thích khách hàng mua nhiều video hơn bằng cách giảm giá thêm khi đạt số lượng nhất định.
+        </p>
+
+        <div className="space-y-4 mb-6">
+          {tiers.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Chưa có cài đặt ưu đãi mua nhiều nào.</p>
+          ) : (
+            tiers.map((tier, index) => (
+              <div key={index} className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Số lượng tối thiểu (Min Items)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={tier.minItems}
+                    onChange={(e) => handleUpdateTier(index, 'minItems', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Giảm thêm (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={tier.discountPercent}
+                      onChange={(e) => handleUpdateTier(index, 'discountPercent', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">%</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemoveTier(index)}
+                  className="mt-5 text-red-500 hover:text-red-700 p-2"
+                  title="Xóa mức ưu đãi"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <button
+          onClick={handleAddTier}
+          className="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center gap-1 mb-6 border border-indigo-600 rounded-md px-3 py-1.5"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Thêm mức ưu đãi mới
+        </button>
+
+        {tiersMessage.text && (
+          <div className={`p-3 rounded-md mb-6 text-sm font-medium ${tiersMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {tiersMessage.text}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveTiers}
+          disabled={savingTiers}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+        >
+          {savingTiers ? 'Đang lưu...' : 'Lưu cấu hình Ưu đãi mua nhiều'}
         </button>
       </div>
     </div>

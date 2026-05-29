@@ -308,8 +308,10 @@ export default function SettingsPage() {
               <select 
                 value={tagFontSize}
                 onChange={(e) => setTagFontSize(e.target.value)}
-                className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500"
+                className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:ring-teal-500 focus:border-teal-500"
               >
+                <option value="8px">Siêu nhỏ (8px)</option>
+                <option value="10px">Rất nhỏ (10px)</option>
                 <option value="12px">Nhỏ (12px)</option>
                 <option value="14px">Vừa (14px) - Mặc định</option>
                 <option value="16px">Lớn (16px)</option>

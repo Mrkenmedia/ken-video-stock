@@ -218,13 +218,33 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
     return url;
   };
 
+  // Hàm loại bỏ dấu tiếng Việt để tìm kiếm chính xác
+  const normalizeStr = (str: string) => {
+    if (!str) return '';
+    return str.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase();
+  };
+
   // Lọc sản phẩm
   const filteredProducts = products.filter(product => {
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = product.name.toLowerCase().includes(searchLower) || 
-                          generateIdFromSku(product.sku).toLowerCase().includes(searchLower) ||
-                          product.tags.some(t => t.toLowerCase().includes(searchLower));
+    const searchNorm = normalizeStr(searchQuery);
+    
     const matchesTag = selectedTag ? product.tags.includes(selectedTag) : true;
+    
+    if (!searchNorm) return matchesTag;
+
+    const nameNorm = normalizeStr(product.name);
+    const skuNorm = normalizeStr(generateIdFromSku(product.sku));
+    
+    let matchesSearch = nameNorm.includes(searchNorm) || skuNorm.includes(searchNorm);
+    
+    if (!matchesSearch && product.tags) {
+      matchesSearch = product.tags.some(t => normalizeStr(t).includes(searchNorm));
+    }
+    
     return matchesSearch && matchesTag;
   });
 

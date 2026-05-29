@@ -68,11 +68,16 @@ export default function BuyPanel({
   const handleAddToCart = () => {
     // Lưu GIÁ GỐC — CartContext sẽ áp Flash Sale động
     const basePriceToStore = format === 'MOV' ? priceMov : priceMp4;
+    const origPriceToStore = format === 'MOV' 
+      ? (originalPriceMov || basePriceToStore) 
+      : (originalPriceMp4 || basePriceToStore);
+      
     addToCart({
       sku,
       name,
       format,
       price: basePriceToStore,
+      originalPrice: origPriceToStore,
       thumbnailUrl,
     });
     setAdded(true);
@@ -81,11 +86,16 @@ export default function BuyPanel({
 
   const handleBuyNow = () => {
     const basePriceToStore = format === 'MOV' ? priceMov : priceMp4;
+    const origPriceToStore = format === 'MOV' 
+      ? (originalPriceMov || basePriceToStore) 
+      : (originalPriceMp4 || basePriceToStore);
+
     addToCart({
       sku,
       name,
       format,
       price: basePriceToStore,
+      originalPrice: origPriceToStore,
       thumbnailUrl,
     });
     router.push('/checkout');

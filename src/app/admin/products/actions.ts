@@ -75,7 +75,7 @@ export async function submitNewProduct(formData: FormData) {
 
   if (success) {
     revalidatePath('/admin/products');
-    revalidatePath('/');
+    revalidatePath('/', 'layout');
     redirect('/admin/products?success=true');
   } else {
     throw new Error('Failed to save product to Google Sheets');
@@ -154,7 +154,7 @@ export async function editProduct(formData: FormData) {
 
   if (success) {
     revalidatePath('/admin/products');
-    revalidatePath('/');
+    revalidatePath('/', 'layout');
     redirect('/admin/products?updated=true');
   } else {
     throw new Error('Failed to update product in Google Sheets');
@@ -166,7 +166,7 @@ export async function deleteProductAction(sku: string) {
   const success = await deleteProduct(sku);
   if (success) {
     revalidatePath('/admin/products');
-    revalidatePath('/');
+    revalidatePath('/', 'layout');
     return { success: true };
   } else {
     return { success: false, message: 'Failed to delete product' };
@@ -183,7 +183,7 @@ export async function deleteAllProductsAction(password: string) {
   
   if (success) {
     revalidatePath('/admin/products');
-    revalidatePath('/');
+    revalidatePath('/', 'layout');
     return { success: true };
   } else {
     return { success: false, message: 'Xóa thất bại. Vui lòng thử lại' };
