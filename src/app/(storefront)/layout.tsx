@@ -88,7 +88,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
         </div>
       </footer>
       <CartDrawer />
-      <VisitorTracker />
+      <VisitorTracker enabled={settings?.enableTelegramVisitorAlerts !== false} />
     </div>
   );
 }

@@ -34,7 +34,7 @@ export default async function StorefrontHome() {
 
   return (
     <div>
-      <StorefrontGrid products={activeProducts} tags={tags} banners={activeBanners} collections={collections} />
+      <StorefrontGrid products={activeProducts} tags={tags} banners={activeBanners} collections={collections} settings={settings} />
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { trackVisitAction } from '@/lib/actions/track';
 
-export default function VisitorTracker() {
+export default function VisitorTracker({ enabled = true }: { enabled?: boolean }) {
   const tracked = useRef(false);
 
   useEffect(() => {
@@ -25,10 +25,10 @@ export default function VisitorTracker() {
       
       // Chờ 2 giây rồi mới gửi để tránh làm chậm lần render đầu tiên
       setTimeout(() => {
-        trackVisitAction(info).catch(console.error);
+        trackVisitAction(info, enabled).catch(console.error);
       }, 2000);
     }
-  }, []);
+  }, [enabled]);
 
   return null;
 }

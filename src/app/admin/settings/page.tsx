@@ -31,6 +31,13 @@ export default function SettingsPage() {
   const [footerMessage, setFooterMessage] = useState({ type: '', text: '' });
   // ───────────────────────────────────────────────────────────────
 
+  // ─ General & UI Settings ───────────────────────────────────────────────────
+  const [enableTelegramVisitorAlerts, setEnableTelegramVisitorAlerts] = useState(true);
+  const [tagFontSize, setTagFontSize] = useState('14px');
+  const [savingGeneral, setSavingGeneral] = useState(false);
+  const [generalMessage, setGeneralMessage] = useState({ type: '', text: '' });
+  // ───────────────────────────────────────────────────────────────
+
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -41,6 +48,8 @@ export default function SettingsPage() {
         if (data.detailButtonTextColor) setDetailButtonTextColor(data.detailButtonTextColor);
         if (data.footerCopyright) setFooterCopyright(data.footerCopyright);
         if (data.footerSubtext) setFooterSubtext(data.footerSubtext);
+        if (data.enableTelegramVisitorAlerts !== undefined) setEnableTelegramVisitorAlerts(data.enableTelegramVisitorAlerts);
+        if (data.tagFontSize) setTagFontSize(data.tagFontSize);
 
         setPaymentInstructions(data.paymentInstructions || `<div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 100%; margin: 15px auto; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 25px; color: #e2e8f0; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
   
@@ -238,6 +247,29 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveGeneral = async () => {
+    setSavingGeneral(true);
+    setGeneralMessage({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: { enableTelegramVisitorAlerts, tagFontSize },
+        }),
+      });
+      if (res.ok) {
+        setGeneralMessage({ type: 'success', text: 'Đã lưu cấu hình chung thành công. Reload trang để thấy thay đổi.' });
+      } else {
+        setGeneralMessage({ type: 'error', text: 'Lỗi khi lưu.' });
+      }
+    } catch {
+      setGeneralMessage({ type: 'error', text: 'Không kết nối được server.' });
+    } finally {
+      setSavingGeneral(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8">Đang tải...</div>;
   }
@@ -245,6 +277,63 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto pb-20">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Cài đặt Hệ thống</h1>
+
+      {/* ── Cài đặt Chung ─────────────────────────────────────────────────── */}
+      <div className="bg-white shadow rounded-lg p-6 mb-8 border border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          Cấu hình Chung
+        </h2>
+        
+        <div className="space-y-6 mb-6">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-800">Thông báo lượt truy cập mới (Telegram)</label>
+              <p className="text-xs text-gray-500 mt-1">Nhận tin nhắn mỗi khi có khách hàng truy cập website (chỉ nhận 1 lần/khách để tránh spam).</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={enableTelegramVisitorAlerts}
+                onChange={(e) => setEnableTelegramVisitorAlerts(e.target.checked)}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+            </label>
+          </div>
+
+          <div className="pb-2">
+            <label className="block text-sm font-medium text-gray-800 mb-2">Cỡ chữ Thẻ phân loại (Tags) trên Trang chủ</label>
+            <div className="flex items-center gap-4">
+              <select 
+                value={tagFontSize}
+                onChange={(e) => setTagFontSize(e.target.value)}
+                className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-teal-500 focus:border-teal-500"
+              >
+                <option value="12px">Nhỏ (12px)</option>
+                <option value="14px">Vừa (14px) - Mặc định</option>
+                <option value="16px">Lớn (16px)</option>
+                <option value="18px">Rất Lớn (18px)</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Ví dụ: 12px, 14px, 16px. Ảnh hưởng đến thanh danh mục nằm ngang.</p>
+          </div>
+        </div>
+
+        {generalMessage.text && (
+          <div className={`p-3 rounded-md mb-4 text-sm font-medium ${generalMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {generalMessage.text}
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveGeneral}
+          disabled={savingGeneral}
+          className="bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+        >
+          {savingGeneral ? 'Đang lưu...' : 'Lưu Cấu hình Chung'}
+        </button>
+      </div>
 
       {/* Email Template Settings */}
       <div className="bg-white shadow rounded-lg p-6 mb-8">

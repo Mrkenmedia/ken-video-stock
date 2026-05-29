@@ -17,6 +17,7 @@ interface StorefrontGridProps {
   tags: string[];
   banners?: Banner[];
   collections?: Collection[];
+  settings?: any;
 }
 
 // Sub-component for a single collection row with scroll buttons
@@ -89,7 +90,7 @@ function CollectionCarousel({ collection, collectionProducts }: { collection: an
   );
 }
 
-export default function StorefrontGrid({ products, tags, banners = [], collections = [] }: StorefrontGridProps) {
+export default function StorefrontGrid({ products, tags, banners = [], collections = [], settings }: StorefrontGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('stt');
@@ -425,11 +426,15 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
       >
         <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 py-3 md:py-4">
           
-          {/* Tags list (scrollable horizontally) */}
-          <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide flex-1 w-full md:w-auto -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Tags list (scrollable horizontally / wrappable) */}
+          <div 
+            className="flex flex-wrap items-center gap-2.5 overflow-x-auto scrollbar-hide flex-1 w-full md:w-auto -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0" 
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             <button 
               onClick={() => setSelectedTag(null)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap border transition-all ${!selectedTag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
+              className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap border transition-all ${!selectedTag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
+              style={{ fontSize: settings?.tagFontSize || '14px' }}
             >
               Tất cả
             </button>
@@ -437,7 +442,8 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
               <button 
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap border transition-all ${selectedTag === tag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
+                className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap border transition-all ${selectedTag === tag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
+                style={{ fontSize: settings?.tagFontSize || '14px' }}
               >
                 {tag}
               </button>
