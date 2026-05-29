@@ -4,6 +4,7 @@ import CartDrawer from '@/components/storefront/CartDrawer';
 import FlashSaleBanner from '@/components/storefront/FlashSaleBanner';
 import PromotionBanner from '@/components/storefront/PromotionBanner';
 import DetailButtonStyleLoader from '@/components/storefront/DetailButtonStyleLoader';
+import TierPopup from '@/components/storefront/TierPopup';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { BRAND_CONFIG } from '@/config/brand';
@@ -85,6 +86,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
         </div>
       </footer>
       <CartDrawer />
+      <TierPopup />
       <VisitorTracker enabled={settings?.enableTelegramVisitorAlerts !== false} />
     </div>
   );

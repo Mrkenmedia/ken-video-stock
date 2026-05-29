@@ -11,6 +11,12 @@ export default function PromotionsPage() {
   const [newUserFlashSalePercent, setNewUserFlashSalePercent] = useState('0');
   const [newUserFlashSaleDuration, setNewUserFlashSaleDuration] = useState('0');
   
+  const [tierPopupEnabled, setTierPopupEnabled] = useState('false');
+  const [tierPopupTitle, setTierPopupTitle] = useState('🎁 Ưu đãi độc quyền hôm nay!');
+  const [tierPopupDescription, setTierPopupDescription] = useState('Mua càng nhiều, giảm càng sâu. Giảm thêm lên tới {maxTier}% khi mua số lượng lớn!');
+  const [tierPopupColor, setTierPopupColor] = useState('cyan');
+  const [tierPopupEffect, setTierPopupEffect] = useState('bounce');
+  
   const [promoTitle, setPromoTitle] = useState('🔥 KHUYẾN MÃI TOÀN SÀN 🔥');
   const [promoSubtitle, setPromoSubtitle] = useState('Giảm tới {discount}% — Kho video chất lượng 4K');
   const [promoColorFrom, setPromoColorFrom] = useState('#f97316');
@@ -38,6 +44,12 @@ export default function PromotionsPage() {
         setGlobalDiscountEnd(data.globalDiscountEnd || '');
         setNewUserFlashSalePercent(data.newUserFlashSalePercent || '0');
         setNewUserFlashSaleDuration(data.newUserFlashSaleDuration || '0');
+        
+        if (data.tierPopupEnabled) setTierPopupEnabled(data.tierPopupEnabled);
+        if (data.tierPopupTitle) setTierPopupTitle(data.tierPopupTitle);
+        if (data.tierPopupDescription) setTierPopupDescription(data.tierPopupDescription);
+        if (data.tierPopupColor) setTierPopupColor(data.tierPopupColor);
+        if (data.tierPopupEffect) setTierPopupEffect(data.tierPopupEffect);
         
         if (data.promoTitle) setPromoTitle(data.promoTitle);
         if (data.promoSubtitle) setPromoSubtitle(data.promoSubtitle);
@@ -84,6 +96,11 @@ export default function PromotionsPage() {
             promoCtaLabel,
             promoCtaBg,
             promoCtaText,
+            tierPopupEnabled,
+            tierPopupTitle,
+            tierPopupDescription,
+            tierPopupColor,
+            tierPopupEffect,
           }
         }),
       });
@@ -386,6 +403,84 @@ export default function PromotionsPage() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           Thêm mức ưu đãi mới
         </button>
+
+        {/* Tier Popup Banner Settings */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+            Popup Quảng Cáo (Góc màn hình)
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Hiển thị một popup nhỏ gián tiếp giới thiệu về Ưu đãi Mua nhiều khi khách mới vào web. Khi thu nhỏ, popup sẽ nằm ở góc dưới bên trái màn hình.
+          </p>
+
+          <div className="mb-6 flex items-center">
+            <input
+              id="tierPopupEnabled"
+              type="checkbox"
+              checked={tierPopupEnabled === 'true'}
+              onChange={(e) => setTierPopupEnabled(e.target.checked ? 'true' : 'false')}
+              className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <label htmlFor="tierPopupEnabled" className="ml-2 text-sm font-medium text-gray-900">
+              Bật Popup quảng cáo Ưu đãi Mua nhiều
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu đề Popup</label>
+              <input
+                type="text"
+                value={tierPopupTitle}
+                onChange={(e) => setTierPopupTitle(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung (dùng {'{maxTier}'} để chèn % tối đa)</label>
+              <textarea
+                value={tierPopupDescription}
+                onChange={(e) => setTierPopupDescription(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Màu sắc chủ đạo</label>
+              <select
+                value={tierPopupColor}
+                onChange={(e) => setTierPopupColor(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+              >
+                <option value="cyan">Cyan (Lấp lánh xanh lam)</option>
+                <option value="amber">Amber (Vàng nghệ)</option>
+                <option value="green">Green (Xanh lục)</option>
+                <option value="purple">Purple (Tím quyền lực)</option>
+                <option value="rose">Rose (Hồng nhạt)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Hiệu ứng chuyển động (Animation)</label>
+              <select
+                value={tierPopupEffect}
+                onChange={(e) => setTierPopupEffect(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+              >
+                <option value="none">Không có (Tĩnh)</option>
+                <option value="bounce">Nhảy lên xuống (Bounce)</option>
+                <option value="pulse">Nhịp đập (Pulse)</option>
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={handleSaveDiscount}
+            disabled={savingDiscount}
+            className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-md shadow-sm transition disabled:opacity-50 flex items-center gap-2 mb-4"
+          >
+            {savingDiscount ? 'Đang lưu...' : 'Lưu cài đặt Popup'}
+          </button>
+        </div>
 
         {tiersMessage.text && (
           <div className={`p-3 rounded-md mb-6 text-sm font-medium ${tiersMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
