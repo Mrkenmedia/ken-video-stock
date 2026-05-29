@@ -13,8 +13,8 @@ export default function TierPopup() {
     async function fetchData() {
       try {
         const [settingsRes, tiersRes] = await Promise.all([
-          fetch('/api/settings'),
-          fetch('/api/tiers')
+          fetch(`/api/settings?t=${Date.now()}`, { cache: 'no-store' }),
+          fetch(`/api/tiers?t=${Date.now()}`, { cache: 'no-store' })
         ]);
         
         if (settingsRes.ok && tiersRes.ok) {
