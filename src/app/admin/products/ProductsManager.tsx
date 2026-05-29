@@ -339,8 +339,9 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
             </div>
 
             {/* Modal Form */}
-            <form action={editProduct} className="p-6 md:p-8 space-y-6">
-              <input type="hidden" name="originalSku" value={editingProduct.sku} />
+            <form action={editProduct}>
+              <div className="p-6 md:p-8 space-y-6">
+                <input type="hidden" name="originalSku" value={editingProduct.sku} />
 
               {/* Section 1: Thông tin cơ bản */}
               <div className="space-y-4">
@@ -515,12 +516,14 @@ export default function ProductsManager({ initialProducts, tags, googleSheetId }
                 </div>
               </div>
 
+              </div>
+
               {/* Footer Buttons */}
-              <div className="pt-5 border-t border-gray-200 flex justify-end gap-3">
+              <div className="sticky bottom-0 z-20 bg-white p-5 border-t border-gray-200 flex justify-end gap-3 rounded-b-xl">
                 <button
                   type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition"
+                  className="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition bg-white"
                 >
                   Hủy bỏ
                 </button>

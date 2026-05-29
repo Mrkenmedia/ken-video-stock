@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { BRAND_CONFIG } from '@/config/brand';
 import { getSettings } from '@/lib/google';
+import VisitorTracker from '@/components/storefront/VisitorTracker';
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const [session, settings] = await Promise.all([
@@ -87,6 +88,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
         </div>
       </footer>
       <CartDrawer />
+      <VisitorTracker />
     </div>
   );
 }
