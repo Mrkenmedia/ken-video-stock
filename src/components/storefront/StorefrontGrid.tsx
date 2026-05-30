@@ -442,12 +442,12 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
             <select
               value={selectedTag || ''}
               onChange={(e) => setSelectedTag(e.target.value || null)}
-              className="w-full appearance-none bg-slate-900/80 backdrop-blur border border-slate-700 text-white rounded-full px-5 py-3 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer font-medium"
+              className="w-full appearance-none bg-slate-900/80 backdrop-blur border border-slate-700 text-white rounded-full px-5 py-2.5 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer font-medium"
               style={{ fontSize: settings?.tagFontSize || '14px' }}
             >
-              <option value="" className="bg-slate-900 text-slate-200 py-2" style={{ fontSize: settings?.tagFontSize || '14px' }}>Tất cả danh mục</option>
+              <option value="" className="bg-slate-900 text-slate-200" style={{ fontSize: settings?.tagFontSize || '14px' }}>Tất cả danh mục</option>
               {tags.map((tag) => (
-                <option key={tag} value={tag} className="bg-slate-900 text-slate-200 py-2" style={{ fontSize: settings?.tagFontSize || '14px' }}>{tag}</option>
+                <option key={tag} value={tag} className="bg-slate-900 text-slate-200" style={{ fontSize: settings?.tagFontSize || '14px' }}>{tag}</option>
               ))}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-cyan-400">
