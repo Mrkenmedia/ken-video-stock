@@ -99,67 +99,46 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
 
   // Swipe / Drag dùng useRef để tránh re-render
   const bannerRef = useRef<HTMLElement>(null);
-  const dragState = useRef({ startX: 0, endX: 0, isDragging: false });
+  const dragState = useRef({ startX: 0, endX: 0, isDragging: false, isSwiped: false });
   const minSwipeDistance = 50;
 
-  const handleSwipeEnd = useCallback(() => {
+  const handleSwipeEnd = () => {
     const { startX, endX, isDragging } = dragState.current;
     if (!isDragging) return;
     dragState.current.isDragging = false;
     const distance = startX - endX;
-    if (Math.abs(distance) < minSwipeDistance) return;
-    if (distance > 0 && banners.length > 1) {
-      // Vuốt trái → slide tiếp
-      setActiveSlide(prev => (prev + 1) % banners.length);
-    } else if (distance < 0 && banners.length > 1) {
-      // Vuốt phải → slide trước
-      setActiveSlide(prev => (prev - 1 + banners.length) % banners.length);
+    
+    // Đánh dấu là vừa vuốt để chặn sự kiện click vào Link (nếu có)
+    if (Math.abs(distance) >= minSwipeDistance) {
+      dragState.current.isSwiped = true;
+      setTimeout(() => { dragState.current.isSwiped = false; }, 100);
+      
+      if (distance > 0 && banners.length > 1) {
+        setActiveSlide(prev => (prev + 1) % banners.length);
+      } else if (distance < 0 && banners.length > 1) {
+        setActiveSlide(prev => (prev - 1 + banners.length) % banners.length);
+      }
     }
-  }, [banners.length]);
+  };
 
-  useEffect(() => {
-    const el = bannerRef.current;
-    if (!el) return;
+  const onTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    dragState.current = { startX: clientX, endX: clientX, isDragging: true, isSwiped: false };
+  };
 
-    const onTouchStart = (e: TouchEvent) => {
-      dragState.current = { startX: e.touches[0].clientX, endX: e.touches[0].clientX, isDragging: true };
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (dragState.current.isDragging) {
-        dragState.current.endX = e.touches[0].clientX;
-      }
-    };
-    const onTouchEnd = () => handleSwipeEnd();
+  const onTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (dragState.current.isDragging) {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      dragState.current.endX = clientX;
+    }
+  };
 
-    const onMouseDown = (e: MouseEvent) => {
-      dragState.current = { startX: e.clientX, endX: e.clientX, isDragging: true };
-    };
-    const onMouseMove = (e: MouseEvent) => {
-      if (dragState.current.isDragging) {
-        dragState.current.endX = e.clientX;
-      }
-    };
-    const onMouseUp = () => handleSwipeEnd();
-    const onMouseLeave = () => handleSwipeEnd();
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
-    el.addEventListener('touchend', onTouchEnd);
-    el.addEventListener('mousedown', onMouseDown);
-    el.addEventListener('mousemove', onMouseMove);
-    el.addEventListener('mouseup', onMouseUp);
-    el.addEventListener('mouseleave', onMouseLeave);
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-      el.removeEventListener('mousedown', onMouseDown);
-      el.removeEventListener('mousemove', onMouseMove);
-      el.removeEventListener('mouseup', onMouseUp);
-      el.removeEventListener('mouseleave', onMouseLeave);
-    };
-  }, [handleSwipeEnd]);
+  const handleClickLink = (e: React.MouseEvent) => {
+    if (dragState.current.isSwiped) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   // Tính toán chiều cao thực tế của header để ghim (sticky) thanh filter
   useEffect(() => {
@@ -317,6 +296,13 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
         <section 
           ref={bannerRef}
           className="relative w-full aspect-video min-h-[300px] max-h-[800px] bg-slate-950 overflow-hidden cursor-grab active:cursor-grabbing select-none"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={handleSwipeEnd}
+          onMouseDown={onTouchStart}
+          onMouseMove={onTouchMove}
+          onMouseUp={handleSwipeEnd}
+          onMouseLeave={handleSwipeEnd}
         >
           {/* Banner slides */}
           <div className="absolute inset-0 w-full h-full">
@@ -333,7 +319,12 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
                   <div className="relative w-full h-full flex items-center justify-center">
                     {/* Clickable background overlay link if linkUrl exists */}
                     {banner.linkUrl && (
-                      <Link href={banner.linkUrl} className="absolute inset-0 z-10 cursor-pointer touch-none pointer-events-auto" draggable={false}>
+                      <Link 
+                        href={banner.linkUrl} 
+                        className="absolute inset-0 z-10 cursor-pointer touch-none pointer-events-auto" 
+                        draggable={false}
+                        onClick={handleClickLink}
+                      >
                         <span className="sr-only">Xem chi tiết {banner.title}</span>
                       </Link>
                     )}
@@ -454,9 +445,9 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
               className="w-full appearance-none bg-slate-900/80 backdrop-blur border border-slate-700 text-white rounded-full px-5 py-3 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer font-medium"
               style={{ fontSize: settings?.tagFontSize || '14px' }}
             >
-              <option value="">Tất cả danh mục</option>
+              <option value="" className="bg-slate-900 text-slate-200 py-2" style={{ fontSize: settings?.tagFontSize || '14px' }}>Tất cả danh mục</option>
               {tags.map((tag) => (
-                <option key={tag} value={tag}>{tag}</option>
+                <option key={tag} value={tag} className="bg-slate-900 text-slate-200 py-2" style={{ fontSize: settings?.tagFontSize || '14px' }}>{tag}</option>
               ))}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-cyan-400">
