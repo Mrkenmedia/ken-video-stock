@@ -446,11 +446,26 @@ export default function StorefrontGrid({ products, tags, banners = [], collectio
       >
         <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 py-3 md:py-4">
           
-          {/* Tags list (scrollable horizontally / wrappable) */}
-          <div 
-            className="flex flex-wrap items-center gap-2.5 overflow-x-auto scrollbar-hide flex-1 w-full md:w-auto -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0" 
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          {/* Mobile Category Menu (Dropdown) */}
+          <div className="w-full md:hidden relative">
+            <select
+              value={selectedTag || ''}
+              onChange={(e) => setSelectedTag(e.target.value || null)}
+              className="w-full appearance-none bg-slate-900/80 backdrop-blur border border-slate-700 text-white rounded-full px-5 py-3 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer font-medium"
+              style={{ fontSize: settings?.tagFontSize || '14px' }}
+            >
+              <option value="">Tất cả danh mục</option>
+              {tags.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-cyan-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+            </div>
+          </div>
+
+          {/* Desktop Tags list */}
+          <div className="hidden md:flex flex-wrap items-center gap-2.5 flex-1">
             <button 
               onClick={() => setSelectedTag(null)}
               className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap border transition-all ${!selectedTag ? 'bg-cyan-600 text-white border-cyan-500 shadow-md shadow-cyan-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'}`}
